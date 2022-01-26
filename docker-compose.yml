@@ -1,0 +1,54 @@
+version: '3.7'
+services:
+  app001-provider:
+    container_name: app001-provider
+    build:
+      context: ./provider/.
+      args:
+        NODE_ENV: "production"
+        PORT: 5551
+    env_file:
+      - .env
+    ports:
+      - 5551:5551
+    networks:
+      - service-web
+    restart: always
+    volumes:
+      - .env:/go/src/provider/.env:ro
+  app001-redis:
+    image: redis
+    container_name: app001-redis
+    ports:
+      - 6380:6379
+    networks:
+      - service-web
+  app001-mongo:
+    image: mongo
+    container_name: app001-mongo
+    # command: mongod --dbpath /data/db --repair
+    ports:
+      - 27018:27017
+    networks:
+      - service-web
+  app001-postgres:
+    image: timescale/timescaledb:2.5.1-pg14
+    container_name: app001-postgres
+    environment:
+      - POSTGRES_USER=services
+      - POSTGRES_PASSWORD=services
+      - POSTGRES_DB=services
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - ${DATABASE_PORT}:${DATABASE_PORT}
+    healthcheck:
+      test: [ "CMD", "pg_isready" , "-U", "trade" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - service-web
+networks:
+  service-web:
+    name: service-web
+    driver: bridge

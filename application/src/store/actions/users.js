@@ -1,0 +1,11 @@
+export const CREATE_USER = 'CREATE_USER'
+export const GET_USERS = 'GET_USERS'
+export const GET_USER = 'GET_USER'
+export const REMOVE_USER = 'REMOVE_USER'
+
+export const SET_USER = 'SET_USER'
+export const SET_USER_ENABLE = 'SET_USER_ENABLE'
+export const GET_USERS_SUCCESS = 'GET_USERS_SUCCESS'
+export const SET_USER_SUCCESS = 'SET_USER_SUCCESS'
+export const GET_USERS_ERROR = 'GET_USERS_ERROR'
+export const SET_USER_ERROR = 'SET_USER_ERROR'
