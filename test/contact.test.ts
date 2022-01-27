@@ -1,5 +1,5 @@
 import request from "supertest";
-import app from "../src/app";
+import app from "../api/src/app";
 import { expect} from "chai";
 
 describe("GET /contact", () => {

@@ -92,6 +92,20 @@ const actions = {
                     return role
                 })
             }
+            if (user.accounts && user.accounts.length > 0) {
+                user.accounts = user.accounts.map(account => {
+                    if (account.id) {
+                        return account.id
+                    }
+                    return account
+                })
+                user.accounts = user.accounts.map(account => {
+                    if (account.label) {
+                        return account.value
+                    }
+                    return account
+                })
+            }
             fetch(`${url}/api/v1/user`, {
                 method: 'PUT',
                 body: JSON.stringify(user),

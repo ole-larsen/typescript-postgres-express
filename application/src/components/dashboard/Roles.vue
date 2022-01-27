@@ -33,7 +33,7 @@
         <td slot="users" slot-scope="{item}" class="edit-relation" v-if="isSuperAdmin || isAdmin">
           <CButtonGroup>
             <template v-for="(user) in item.users">
-              <CButton color="info" size="sm" @click.stop.prevent="editUser(user)">
+              <CButton color="info" size="sm" @click.stop.prevent="editUser(user)" v-bind:key="user.value">
                 {{user.label}}
               </CButton>
             </template>
@@ -312,7 +312,7 @@ export default {
           .catch(e => {
             console.log(e)
           })
-    },
+    }
   }
 }
 </script>

@@ -5,6 +5,7 @@ import service from './modules/service'
 import sidebar from './modules/sidebar'
 import users from './modules/users'
 import roles from './modules/roles'
+import accounts from "./modules/accounts";
 Vue.use(Vuex)
 
 const debug = process.env.NODE_ENV !== 'production'
@@ -15,7 +16,8 @@ export default new Vuex.Store({
     sidebar,
     service,
     users,
-    roles
+    roles,
+    accounts
   },
   strict: debug
 })

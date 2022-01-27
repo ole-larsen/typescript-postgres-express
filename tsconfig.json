@@ -9,13 +9,13 @@
         "moduleResolution": "node",
         "sourceMap": true,
         "skipLibCheck": true,
-        "outDir": "api/dist",
+        "outDir": "build",
         "baseUrl": ".",
         "paths": {
             "*": [
                 "node_modules/*",
-                "src/types/*",
-                "src/certs/*"
+                "api/src/types/*",
+                "api/src/certs/*"
             ],
             "prom-client": ["node_modules/prom-client/index"]
         },
@@ -25,5 +25,12 @@
     },
     "include": [
         "api/src/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "application/**/*",
+        "provider",
+        "docker/**/*",
+        "migrations"
     ]
 }

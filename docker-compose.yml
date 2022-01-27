@@ -1,5 +1,58 @@
 version: '3.7'
 services:
+  app001-frontend:
+    container_name: app001-frontend
+    build:
+      context: application
+      args:
+        NODE_ENV: 'production'
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/vhosts:/etc/nginx/conf.d
+      - ./docker/nginx/logs:/var/log/nginx
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+      - ./docker/certbot-etc:/etc/letsencrypt
+      - ./docker/certbot-var:/var/lib/letsencrypt
+      - ./docker/dhparam:/etc/ssl/certs
+      - /var/www/node_modules
+      - .env:/var/www/application/.env:ro
+    environment:
+      DOMAIN: "localhost"
+      NODE_ENV: "production"
+      SERVER_PORT: "3010"
+    links:
+      - app001-backend:app001-backend
+      - app001-provider:app001-provider
+    networks:
+      - service-web
+    restart: always
+  app001-backend:
+    container_name: app001-backend
+    build:
+      context: .
+      args:
+        NODE_ENV: 'production'
+        SERVER_PORT: 3010
+    ports:
+      - 3010:3010
+    networks:
+      - service-web
+    restart: always
+    links:
+      - app001-provider:app001-provider
+      - app001-postgres:app001-postgres
+      - app001-redis:app001-redis
+    depends_on:
+      - app001-provider
+      - app001-postgres
+    volumes:
+      - ./docker/certbot-etc:/etc/letsencrypt
+      - ./docker/certbot-var:/var/lib/letsencrypt
+      - /server/node_modules
+    env_file:
+      - .env
   app001-provider:
     container_name: app001-provider
     build:

@@ -1,5 +1,5 @@
 module.exports = {
-  lintOnSave: false,
+  lintOnSave: true,
   runtimeCompiler: true,
   configureWebpack: {
     //Necessary to run npm link https://webpack.js.org/configuration/resolve/#resolve-symlinks

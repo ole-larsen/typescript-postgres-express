@@ -3,7 +3,10 @@ node_modules
 debug.log
 .env
 .idea
-.
+dist
+build
+app/dist
+docker
 lib-cov
 *.seed
 *.log

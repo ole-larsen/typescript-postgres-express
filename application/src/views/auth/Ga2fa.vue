@@ -53,7 +53,7 @@
 
 <script>
   import authMixin from '@/mixins/auth'
-  import {AUTH_LOGOUT, AUTH_SIGNIN, USER_2FA_REQUEST} from '../../store/actions/auth'
+  import {AUTH_LOGOUT, USER_2FA_REQUEST} from '../../store/actions/auth'
 
   export default {
   name: 'Ga2fa',

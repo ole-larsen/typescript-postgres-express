@@ -18,3 +18,4 @@
 15. add CRUD for users
 16. add CRUD for roles
 17. frontend is controlling by vuex
+18. add CRUD and relations for accounts

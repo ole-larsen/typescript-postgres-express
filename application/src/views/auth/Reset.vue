@@ -1,31 +1,4 @@
 <template>
-<!--  <div class="app flex-column align-items-center justify-content-center">-->
-<!--    <img :src="logo" alt="" width="180px" />-->
-<!--    <div class="form">-->
-<!--      <div class="mb-2 mt-2" v-if="showError  && error.api.length > 0">-->
-<!--        <vs-alert color="danger" v-for="(err, index) in error.api" :key="index">-->
-<!--          <template slot="title">Error</template>-->
-<!--          {{ err }}-->
-<!--        </vs-alert>-->
-<!--      </div>-->
-<!--      <form v-on:submit.prevent>-->
-<!--        <vs-input type="password" label="Password" icon="lock" v-model="credentials.password" :danger-text="error.password" :danger="showError" autofocus required />-->
-<!--        <vs-input type="password" label="Password" icon="lock" v-model="credentials.confirm" :danger-text="error.confirm" :danger="showError" required />-->
-<!--        <div class="form__buttons">-->
-<!--          <vs-button-->
-<!--            @keyup.enter="submitReset()"-->
-<!--            @click.stop.prevent="submitReset()"-->
-<!--            :disabled="isDisabled"-->
-<!--          >-->
-<!--            Change password-->
-<!--          </vs-button>-->
-<!--        </div>-->
-<!--        <p>-->
-<!--          Already have an account? <router-link :to="{name: 'Login'}">Login</router-link>-->
-<!--        </p>-->
-<!--      </form>-->
-<!--    </div>-->
-<!--  </div>-->
   <div class="d-flex align-items-center min-vh-100">
     <CContainer fluid>
       <CRow class="justify-content-center">
@@ -83,7 +56,7 @@
 
 <script>
 import authMixin from '@/mixins/auth'
-import {USER_FORGOT, USER_RESET} from "../../store/actions/auth";
+import {USER_RESET} from "../../store/actions/auth";
 
 export default {
   name: 'Reset',

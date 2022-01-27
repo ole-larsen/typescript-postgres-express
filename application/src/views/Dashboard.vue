@@ -7,7 +7,17 @@
     </CRow>
     <CRow>
       <CCol md="12">
-        <users @editRole="editRole" @updateRoles="updateRoles" :_user="user" :_users="users"></users>
+        <users @editRole="editRole"
+               @editAccount="editAccount"
+               @updateRoles="updateRoles"
+               @updateAccounts="updateAccounts"
+               :_user="user" :_users="users">
+        </users>
+      </CCol>
+    </CRow>
+    <CRow>
+      <CCol md="12">
+        <accounts @editUser="editUser" @updateUsers="updateUsers" :_accounts="accounts" :_account="account"></accounts>
       </CCol>
     </CRow>
   </div>
@@ -17,15 +27,18 @@
 
 import Roles from "../components/dashboard/Roles";
 import Users from "../components/dashboard/Users";
+import Accounts from "../components/dashboard/Accounts";
 
 export default {
   name: 'Dashboard',
   data () {
     return {
-      user: undefined,
-      role: undefined,
-      users: undefined,
-      roles: undefined
+      user:     undefined,
+      role:     undefined,
+      account:  undefined,
+      users:    undefined,
+      roles:    undefined,
+      accounts: undefined
     }
   },
   methods: {
@@ -35,16 +48,23 @@ export default {
     editUser (data) {
       this.user = data.user
     },
+    editAccount (data) {
+      this.account = data.account
+    },
     updateRoles (data) {
       this.roles = data.roles
     },
     updateUsers (data) {
       this.users = data.users
+    },
+    updateAccounts (data) {
+      this.accounts = data.accounts
     }
   },
   components: {
     roles: Roles,
-    users: Users
+    users: Users,
+    accounts: Accounts
   }
 }
 </script>

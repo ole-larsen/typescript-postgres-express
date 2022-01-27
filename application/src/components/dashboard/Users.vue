@@ -30,17 +30,27 @@
           </template>
         </td>
 
-        <td slot="roles" slot-scope="{item}" class="edit-relation" v-if="isSuperAdmin || isAdmin">
+        <td slot="roles" slot-scope="{item}" class="edit-relation">
           <CButtonGroup>
             <template v-for="(role) in item.roles">
-              <CButton color="info" size="sm" @click.stop.prevent="editRole(role)">
+              <CButton color="info" size="sm" @click.stop.prevent="editRole(role)" v-bind:key="role.value">
                 {{role.label}}
               </CButton>
             </template>
           </CButtonGroup>
         </td>
 
-        <td slot="controls" slot-scope="{item}" v-if="isSuperAdmin || isAdmin">
+        <td slot="accounts" slot-scope="{item}" class="edit-relation">
+          <CButtonGroup>
+            <template v-for="(account) in item.accounts">
+              <CButton color="info" size="sm" @click.stop.prevent="editAccount(account)" v-bind:key="account.value">
+                {{account.label}}
+              </CButton>
+            </template>
+          </CButtonGroup>
+        </td>
+
+        <td slot="controls" slot-scope="{item}">
           <CButtonGroup>
             <CButton color="link" @click.stop.prevent="edit(item)">Edit</CButton>
             <CButton color="danger" @click.stop.prevent="remove(item)" v-if="isSuperAdmin">Remove</CButton>
@@ -151,6 +161,21 @@
                   track-by="title"></multiselect>
             </CCol>
           </CRow>
+          <CRow form class="form-group margin-top-30" v-if="accounts && itemForUpdate.id && isSuperAdmin">
+            <CCol tag="label" sm="3" class="col-form-label">
+              Accounts
+            </CCol>
+            <CCol sm="9">
+              <multiselect
+                  v-model="itemForUpdate.accounts"
+                  :options="accounts"
+                  :multiple="true"
+                  :close-on-select="false"
+                  placeholder="Select accounts"
+                  label="title"
+                  track-by="title"></multiselect>
+            </CCol>
+          </CRow>
         </CForm>
         <template #header>
           <h6 class="modal-title">{{itemForUpdate.id ? "edit" : "create"}} {{itemForUpdate.username}}</h6>
@@ -170,6 +195,7 @@ import {GET_USER, GET_USERS, REMOVE_USER, SET_USER, SET_USER_ENABLE} from '../..
 import {mapState} from 'vuex'
 import {GET_ROLES} from '../../store/actions/roles'
 import Multiselect from 'vue-multiselect'
+import {GET_ACCOUNTS} from "../../store/actions/accounts";
 
 export default {
   name: 'Users',
@@ -199,12 +225,27 @@ export default {
           id: role.id,
           title: role.title
         }
-      })
+      }),
+      accounts: state => state.accounts.accounts.map(account => {
+        return {
+          id: account.id,
+          title: account.name
+        }
+      }),
+      currentUser: state => {
+        if (state && state.auth && state.auth.user) {
+          return state.auth.user
+        }
+        return null
+      }
     })
   },
   mounted () {
-    if (this.roles.length === 0) {
+    if (this.roles && this.roles.length === 0) {
       this.fetchRoles()
+    }
+    if (this.accounts && this.accounts.length === 0) {
+      this.fetchAccounts()
     }
   },
   data () {
@@ -222,7 +263,8 @@ export default {
         password: undefined,
         confirm: undefined,
         secret: undefined,
-        roles: undefined
+        roles: undefined,
+        accounts: undefined
       },
       darkModal: false
     }
@@ -236,6 +278,10 @@ export default {
       if (this.itemForUpdate.roles && this.itemForUpdate.id) {
         this.itemForUpdate.roles = this.itemForUpdate.roles.map(role => role.id)
       }
+      if (this.itemForUpdate.accounts && this.itemForUpdate.id) {
+        this.itemForUpdate.accounts = this.itemForUpdate.accounts.map(account => account.id)
+      }
+
       this.dispatch(SET_USER, this.itemForUpdate)
     },
     reset () {
@@ -247,7 +293,8 @@ export default {
         password: undefined,
         confirm: undefined,
         secret: undefined,
-        roles: undefined
+        roles: undefined,
+        accounts: undefined
       }
       this.darkModal = false
     },
@@ -257,6 +304,12 @@ export default {
     editRole (role) {
       this.$emit('editRole', {
         role: this.roles.find(r => r.id === role.value)
+      })
+    },
+    editAccount (account) {
+      console.log(account)
+      this.$emit('editAccount', {
+        account: this.accounts.find(a => a.id === account.value)
       })
     },
     remove (user) {
@@ -274,6 +327,17 @@ export default {
           }
         })
         .filter(role => !!role)
+      user.accounts = user.accounts
+          .map(accountId => {
+            const account = this.accounts.find(account => account.id === accountId)
+            if (account) {
+              return {
+                id: account.id,
+                title: account.title
+              }
+            }
+          })
+          .filter(account => !!account)
       this.itemForUpdate = user
       this.darkModal = true
     },
@@ -288,6 +352,7 @@ export default {
               } else if (itemForUpdate === SET_USER) {
                 this.reset()
                 this.fetchRoles()
+                this.fetchAccounts()
               } else if (itemForUpdate === SET_USER_ENABLE){
                 this.fetchUsers()
               } else if (itemForUpdate === REMOVE_USER){
@@ -332,6 +397,7 @@ export default {
           ]
           if (this.isSuperAdmin || this.isAdmin) {
             this.tableFields.push({ key: 'roles' })
+            this.tableFields.push({ key: 'accounts' })
             this.tableFields.push({ key: 'controls' })
           }
           this.tableItems = r.map(user => {
@@ -341,6 +407,12 @@ export default {
                 return {label: role.title, value: role.id}
               }
             }).filter(role => !!role)
+            const accounts = user.accounts ? user.accounts.map(accountId => {
+              const account = this.accounts.find(account => account.id === accountId)
+              if (account && account.title) {
+                return {label: account.title, value: account.id}
+              }
+            }).filter(account => !!account) : undefined
             return {
               id: user.id,
               username: user.username,
@@ -350,6 +422,7 @@ export default {
               updated: user.updated,
               enabled: user.enabled,
               roles: roles,
+              accounts: accounts,
               action: undefined
             }
           })
@@ -371,11 +444,28 @@ export default {
           .catch(e => {
             console.log(e)
           })
+    },
+    fetchAccounts () {
+      this.$store.dispatch(GET_ACCOUNTS, {url: this.url})
+          .then(accounts => {
+            if (accounts) {
+              this.fetchUsers()
+              this.$emit('updateAccounts', {
+                accounts: accounts
+              })
+            }
+          })
+          .catch(e => {
+            console.log(e)
+          })
     }
   }
 }
 </script>
 <style lang="scss">
+  .margin-top-30 {
+    margin: 34px 0;
+  }
   .edit-relation {
     .btn {
       margin-right: 8px;
@@ -422,6 +512,7 @@ export default {
       border-radius: 8px;
       list-style: none;
       padding: 8px 8px;
+      z-index: 10;
       li {
         cursor: pointer;
         span {
