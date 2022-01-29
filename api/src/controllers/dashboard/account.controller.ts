@@ -44,45 +44,8 @@ export class AccountController extends BaseController implements ICRUDController
         // use with parameters
         const {id, name, enabled} = req.query;
         if (id) {
-            try {
-                if (Number.isFinite(Number(id))) {
-                    this.repository.getAccountById(Number(id as string))
-                        .then((account: AccountEntity) => {
-                            this.emitter.emit("account", {
-                                method: "get",
-                                response: {account: account},
-                                code: OK_REQUEST_CODE
-                            });
-                            return res.status(OK_REQUEST_CODE).json(account);
-                        })
-                        .catch(e => {
-                            this.emitter.emit("account", {
-                                method: "get",
-                                response: e,
-                                code: BAD_REQUEST_CODE
-                            });
-                            return res.status(BAD_REQUEST_CODE).json({message: e.message});
-                        });
-                } else {
-                    this.emitter.emit("account", {
-                        method: "get",
-                        response: {account: null},
-                        code: BAD_REQUEST_CODE
-                    });
-                    return res.status(BAD_REQUEST_CODE).json([]);
-                }
-            } catch (e) {
-                this.emitter.emit("account", {
-                    method: "get",
-                    response: e,
-                    code: BAD_REQUEST_CODE
-                });
-                return res.status(BAD_REQUEST_CODE).json({message: e.message});
-            }
-        }
-        if (name) {
-            try {
-                this.repository.getAccountByName(name as string)
+            if (Number.isFinite(Number(id))) {
+                this.repository.getAccountById(Number(id as string))
                     .then((account: AccountEntity) => {
                         this.emitter.emit("account", {
                             method: "get",
@@ -98,44 +61,53 @@ export class AccountController extends BaseController implements ICRUDController
                             code: BAD_REQUEST_CODE
                         });
                         return res.status(BAD_REQUEST_CODE).json({message: e.message});
-
                     });
-            } catch (e) {
+            } else {
                 this.emitter.emit("account", {
                     method: "get",
-                    response: e,
+                    response: {account: null},
                     code: BAD_REQUEST_CODE
                 });
-                return res.status(BAD_REQUEST_CODE).json({message: e.message});
+                return res.status(BAD_REQUEST_CODE).json([]);
             }
         }
-        if (enabled) {
-            try {
-                this.repository.getAccountsByEnabled(enabled as string === "true")
-                    .then((accounts: AccountEntity[]) => {
-                        this.emitter.emit("account", {
-                            method: "get",
-                            response: {accounts: accounts},
-                            code: OK_REQUEST_CODE
-                        });
-                        return res.status(OK_REQUEST_CODE).json(accounts);
-                    })
-                    .catch(e => {
-                        this.emitter.emit("account", {
-                            method: "get",
-                            response: e,
-                            code: BAD_REQUEST_CODE
-                        });
-                        return res.status(BAD_REQUEST_CODE).json({message: e.message});
+        if (name) {
+            this.repository.getAccountByName(name as string)
+                .then((account: AccountEntity) => {
+                    this.emitter.emit("account", {
+                        method: "get",
+                        response: {account: account},
+                        code: OK_REQUEST_CODE
                     });
-            } catch (e) {
-                this.emitter.emit("account", {
-                    method: "get",
-                    response: e,
-                    code: BAD_REQUEST_CODE
+                    return res.status(OK_REQUEST_CODE).json(account);
+                })
+                .catch(e => {
+                    this.emitter.emit("account", {
+                        method: "get",
+                        response: e,
+                        code: BAD_REQUEST_CODE
+                    });
+                    return res.status(BAD_REQUEST_CODE).json({message: e.message});
                 });
-                return res.status(BAD_REQUEST_CODE).json({message: e.message});
-            }
+        }
+        if (enabled) {
+            this.repository.getAccountsByEnabled(enabled as string === "true")
+                .then((accounts: AccountEntity[]) => {
+                    this.emitter.emit("account", {
+                        method: "get",
+                        response: {accounts: accounts},
+                        code: OK_REQUEST_CODE
+                    });
+                    return res.status(OK_REQUEST_CODE).json(accounts);
+                })
+                .catch(e => {
+                    this.emitter.emit("account", {
+                        method: "get",
+                        response: e,
+                        code: BAD_REQUEST_CODE
+                    });
+                    return res.status(BAD_REQUEST_CODE).json({message: e.message});
+                });
         }
         this.repository.getAccounts()
             .then((accounts: AccountEntity[]) => {
@@ -157,87 +129,77 @@ export class AccountController extends BaseController implements ICRUDController
     }
 
     public getOne (req: express.Request, res: express.Response): express.Response {
-        try {
-            const id = Number(req.params.id);
-            if (!id || !Number.isFinite(id)) {
-                this.emitter.emit("account", {
-                    method: "getOne",
-                    response: new Error("invalid parameters"),
-                    code: BAD_REQUEST_CODE
-                });
-                return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
-            }
-            this.repository.getAccountById(id)
-                .then((account: AccountEntity) => {
-                    if (account) {
-                        this.emitter.emit("account", {
-                            method: "getOne",
-                            response: {account: account},
-                            code: OK_REQUEST_CODE
-                        });
-                        return res.status(OK_REQUEST_CODE).json({account: account});
-                    }
-                })
-                .catch(e => {
-                    this.emitter.emit("account", {
-                        method: "getOne",
-                        response: e,
-                        code: BAD_REQUEST_CODE
-                    });
-                    return res.status(BAD_REQUEST_CODE).json({message: e.message});
-                });
-        } catch (e) {
+        const id = Number(req.params.id);
+        if (!id || !Number.isFinite(id)) {
             this.emitter.emit("account", {
                 method: "getOne",
-                response: e,
+                response: new Error("invalid parameters"),
                 code: BAD_REQUEST_CODE
             });
-            return res.status(BAD_REQUEST_CODE).json({message: e.message});
+            return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
         }
+        this.repository.getAccountById(id)
+            .then((account: AccountEntity) => {
+                if (account) {
+                    this.emitter.emit("account", {
+                        method: "getOne",
+                        response: {account: account},
+                        code: OK_REQUEST_CODE
+                    });
+                    return res.status(OK_REQUEST_CODE).json({account: account});
+                }
+            })
+            .catch(e => {
+                this.emitter.emit("account", {
+                    method: "getOne",
+                    response: e,
+                    code: BAD_REQUEST_CODE
+                });
+                return res.status(BAD_REQUEST_CODE).json({message: e.message});
+            });
     }
 
     public update (req: express.Request, res: express.Response): express.Response {
-        try {
-            if (!req.body.id) {
-                this.emitter.emit("account", {
-                    method: "update",
-                    response: new Error("invalid parameters"),
-                    code: BAD_REQUEST_CODE
-                });
-                return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
-            }
-            this.repository.getAccountById(req.body.id)
-                .then((account: AccountEntity) => {
-                    if (account) {
-                        // change account status
-                        if (req.body.name) {
-                            account.name = req.body.name;
-                        }
-                        if (req.body.email) {
-                            account.email = req.body.email;
-                        }
-                        if (req.body.fid) {
-                            account.fid = req.body.fid;
-                        }
-                        if (req.body.uid) {
-                            account.uid = req.body.uid;
-                        }
-                        if (req.body.customerPortalId) {
-                            account.customerPortalId = req.body.customerPortalId;
-                        }
-                        if (req.body.type) {
-                            account.type = req.body.type;
-                        }
-                        if (req.body.status) {
-                            account.status = req.body.status;
-                        }
-                        if (account.enabled !== req.body.enabled) {
-                            account.enabled = req.body.enabled;
-                        }
-                        if (req.body.users) {
-                            account.users = req.body.users;
-                        }
-                        account.save()
+        if (!req.body.id) {
+            this.emitter.emit("account", {
+                method: "update",
+                response: new Error("invalid parameters"),
+                code: BAD_REQUEST_CODE
+            });
+            return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
+        }
+        this.repository.getAccountById(req.body.id)
+            .then((account: AccountEntity) => {
+                if (account) {
+                    // change account status
+                    if (req.body.name) {
+                        account.name = req.body.name;
+                    }
+                    if (req.body.email) {
+                        account.email = req.body.email;
+                    }
+                    if (req.body.fid) {
+                        account.fid = req.body.fid;
+                    }
+                    if (req.body.uid) {
+                        account.uid = req.body.uid;
+                    }
+                    if (req.body.customerPortalId) {
+                        account.customerPortalId = req.body.customerPortalId;
+                    }
+                    if (req.body.type) {
+                        account.type = req.body.type;
+                    }
+                    if (req.body.status) {
+                        account.status = req.body.status;
+                    }
+                    if (account.enabled !== req.body.enabled) {
+                        account.enabled = req.body.enabled;
+                    }
+                    if (req.body.users) {
+                        account.users = req.body.users;
+                    }
+                    account.save()
                         .then((r: AccountEntity) => {
                             this.emitter.emit("account", {
                                 method: "update",
@@ -254,44 +216,26 @@ export class AccountController extends BaseController implements ICRUDController
                             });
                             return res.status(BAD_REQUEST_CODE).json({message: e.message});
                         });
-                    }
-                })
-                .catch(e => {
-                    this.emitter.emit("account", {
-                        method: "update",
-                        response: e,
-                        code: BAD_REQUEST_CODE
-                    });
-                    return res.status(BAD_REQUEST_CODE).json({message: e.message});
+                }
+            })
+            .catch(e => {
+                this.emitter.emit("account", {
+                    method: "update",
+                    response: e,
+                    code: BAD_REQUEST_CODE
                 });
-        } catch (e) {
-            this.emitter.emit("account", {
-                method: "update",
-                response: e,
-                code: BAD_REQUEST_CODE
+                return res.status(BAD_REQUEST_CODE).json({message: e.message});
             });
-            return res.status(BAD_REQUEST_CODE).json({message: e.message});
-        }
     }
 
     public create (req: express.Request, res: express.Response): express.Response {
         try {
             const credentials = req.body;
             if (credentials.name === "") {
-                this.emitter.emit("account", {
-                    method: "create",
-                    response: new Error(ERROR_ACCOUNT_EMPTY_NAME),
-                    code: BAD_REQUEST_CODE
-                });
-                return res.status(BAD_REQUEST_CODE).json({message: ERROR_ACCOUNT_EMPTY_NAME});
+                throw new Error(ERROR_ACCOUNT_EMPTY_NAME);
             }
             if (credentials.email === "") {
-                this.emitter.emit("account", {
-                    method: "create",
-                    response: new Error(ERROR_ACCOUNT_EMPTY_EMAIL),
-                    code: BAD_REQUEST_CODE
-                });
-                return res.status(BAD_REQUEST_CODE).json({message: ERROR_ACCOUNT_EMPTY_EMAIL});
+                throw new Error(ERROR_ACCOUNT_EMPTY_EMAIL);
             }
             if (credentials.name !== "") {
                 (async () => {
@@ -365,48 +309,49 @@ export class AccountController extends BaseController implements ICRUDController
     }
 
     public delete (req: express.Request, res: express.Response): express.Response {
-        try {
-            if (!req.body.id) {
-                this.emitter.emit("account", {
-                    method: "delete",
-                    response: new Error("invalid parameters"),
-                    code: BAD_REQUEST_CODE
-                });
-                return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
-            }
-            this.repository.getAccountById(req.body.id)
-                .then(async (account: AccountEntity) => {
-                    if (account) {
-                        try {
-                            const removedAccount = await account.remove();
-                            this.emitter.emit("account", {
-                                method: "create",
-                                response: {account: removedAccount},
-                                code: OK_REQUEST_CODE
-                            });
-                            return res.status(OK_REQUEST_CODE).json({account: removedAccount});
-                        } catch (e) {
-                            throw e;
-                        }
-                    } else {
-                        throw new Error("no account");
-                    }
-                })
-                .catch(e => {
-                    this.emitter.emit("account", {
-                        method: "delete",
-                        response: e,
-                        code: BAD_REQUEST_CODE
-                    });
-                    return res.status(BAD_REQUEST_CODE).json({message: e.message});
-                });
-        } catch (e) {
+        if (!req.body.id) {
             this.emitter.emit("account", {
                 method: "delete",
-                response: e,
+                response: new Error("invalid parameters"),
                 code: BAD_REQUEST_CODE
             });
-            return res.status(BAD_REQUEST_CODE).json({message: e.message});
+            return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
         }
+        this.repository.getAccountById(req.body.id)
+            .then(async (account: AccountEntity) => {
+                if (account) {
+                    try {
+                        const removedAccount = await account.remove();
+                        this.emitter.emit("account", {
+                            method: "create",
+                            response: {account: removedAccount},
+                            code: OK_REQUEST_CODE
+                        });
+                        return res.status(OK_REQUEST_CODE).json({account: removedAccount});
+                    } catch (e) {
+                        this.emitter.emit("account", {
+                            method: "delete",
+                            response: e,
+                            code: BAD_REQUEST_CODE
+                        });
+                        return res.status(BAD_REQUEST_CODE).json({message: e.message});
+                    }
+                } else {
+                    this.emitter.emit("account", {
+                        method: "delete",
+                        response: new Error("no accounts found"),
+                        code: BAD_REQUEST_CODE
+                    });
+                    return res.status(BAD_REQUEST_CODE).json({message: "no accounts found"});
+                }
+            })
+            .catch(e => {
+                this.emitter.emit("account", {
+                    method: "delete",
+                    response: e,
+                    code: BAD_REQUEST_CODE
+                });
+                return res.status(BAD_REQUEST_CODE).json({message: e.message});
+            });
     }
 }

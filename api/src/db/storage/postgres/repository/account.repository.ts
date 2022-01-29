@@ -1,7 +1,6 @@
 import { Pool } from "pg";
 import {POSTGRES_SERVICE} from "../../../../services/constants";
 import {Service} from "../../../../services/app.service";
-import {ADMIN_ROLE_ID, RoleEntity, SUPERADMIN_ROLE_ID, USER_ROLE_ID} from "../../../entities/roles.entity";
 import {ACCOUNTS_TABLE, ROLES_TABLE, USER_ACCOUNT_TABLE, USER_ROLE_TABLE, USERS_TABLE} from "./constants.repository";
 import {IAccountServiceRepository} from "../../../interfaces/account.interface";
 import {AccountEntity} from "../../../entities/accounts.entity";
@@ -25,7 +24,7 @@ export class AccountRepository implements IAccountServiceRepository {
         this.userAccountTable = USER_ACCOUNT_TABLE;
     }
 
-    private getAccount(field: string, id: any): Promise<AccountEntity[]> {
+    private getAccount(field: string, id: number | string | boolean): Promise<AccountEntity[]> {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = await this.database.query(`
@@ -126,7 +125,6 @@ export class AccountRepository implements IAccountServiceRepository {
     /**
      * Get all active accounts
      */
-
     public getAccountsByEnabled(enabled: boolean): Promise<AccountEntity[]> {
         return this.getAccount("enabled", enabled);
     }
@@ -165,6 +163,7 @@ export class AccountRepository implements IAccountServiceRepository {
 
     public update(account: AccountEntity): Promise<AccountEntity> {
         return new Promise(async (resolve, reject) => {
+            // in case of error we can easily find an error using try catch for every async method
             try {
                 try {
                     await this.database.query(
@@ -203,7 +202,6 @@ export class AccountRepository implements IAccountServiceRepository {
                         ]);
                     }
                 } catch (e) {
-                    console.log(e.message, account.id);
                     throw e;
                 }
                 try {
@@ -222,7 +220,6 @@ export class AccountRepository implements IAccountServiceRepository {
                         }));
                     }
                 } catch (e) {
-                    console.log(e);
                     throw e;
                 }
                 resolve(this.getAccountById(account.id));
@@ -241,7 +238,7 @@ export class AccountRepository implements IAccountServiceRepository {
                     account.id
                 ]);
             } catch (e) {
-                throw e;
+                reject(e);
             }
             try {
                 await this.database.query(

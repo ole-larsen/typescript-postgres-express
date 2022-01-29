@@ -4,7 +4,6 @@ import {POSTGRES_SERVICE} from "../../../../services/constants";
 import {Service} from "../../../../services/app.service";
 import {ADMIN_ROLE_ID, RoleEntity, SUPERADMIN_ROLE_ID, USER_ROLE_ID} from "../../../entities/roles.entity";
 import {ROLES_TABLE, USER_ROLE_TABLE, USERS_TABLE} from "./constants.repository";
-import {UserEntity} from "../../../entities/users.entity";
 
 /**
  * Role Repository.
@@ -114,9 +113,13 @@ export class RoleRepository implements IRoleServiceRepository {
 
     public update(role: RoleEntity): Promise<RoleEntity> {
         return new Promise(async (resolve, reject) => {
+            // use combination of try catch to easily find an error
             try {
-                if (role.id === SUPERADMIN_ROLE_ID || role.id === ADMIN_ROLE_ID || role.id === USER_ROLE_ID && !!role.enabled === false) {
-                    throw new Error(`${role.title} cannot be disabled`);
+                const roleBeforeUpdate = await this.getRoleById(role.id);
+                if (roleBeforeUpdate && roleBeforeUpdate.enabled !== role.enabled) {
+                    if (role.id === SUPERADMIN_ROLE_ID || role.id === ADMIN_ROLE_ID || role.id === USER_ROLE_ID) {
+                        throw new Error(`${role.title} cannot be disabled`);
+                    }
                 }
                 try {
                     await this.database.query(
@@ -135,7 +138,6 @@ export class RoleRepository implements IRoleServiceRepository {
                         ]
                     );
                 } catch (e) {
-                    console.log(e.message);
                     throw e;
                 }
                 try {
@@ -148,7 +150,6 @@ export class RoleRepository implements IRoleServiceRepository {
                         ]);
                     }
                 } catch (e) {
-                    console.log(e.message, role.id);
                     throw e;
                 }
                 try {
@@ -167,10 +168,8 @@ export class RoleRepository implements IRoleServiceRepository {
                         }));
                     }
                 } catch (e) {
-                    console.log(e);
                     throw e;
                 }
-
                 resolve(this.getRoleById(role.id));
             } catch (e) {
                 reject(e);
@@ -180,6 +179,7 @@ export class RoleRepository implements IRoleServiceRepository {
 
     public remove(role: RoleEntity): Promise<RoleEntity> {
         return new Promise(async (resolve, reject) => {
+            // use multiple try catch blocks for async operations
             try {
                 if (role.id === SUPERADMIN_ROLE_ID || role.id === ADMIN_ROLE_ID || role.id === USER_ROLE_ID) {
                     throw new Error(`${role.title} cannot be deleted`);

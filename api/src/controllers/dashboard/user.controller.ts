@@ -80,10 +80,12 @@ export class UserController extends BaseController implements ICRUDController {
     }
 
     /**
+     * get /api/v1/user
      * @param req
      * @param res
      */
     public get (req: express.Request, res: express.Response): express.Response {
+        // need this try catch to have correct express.Response in function return type. It should return something
         try {
             this.repository.getUsers()
                 .then((users: UserEntity[]) => {
@@ -134,80 +136,75 @@ export class UserController extends BaseController implements ICRUDController {
     }
 
     public getOne (req: express.Request, res: express.Response): express.Response {
-        try {
-            const id = Number(req.params.id);
-            if (!id || !Number.isFinite(id)) {
-                this.emitter.emit("user", {
-                    method: "getOne",
-                    response: new Error("invalid parameters"),
-                    code: BAD_REQUEST_CODE
-                });
-                return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
-            }
-            this.repository.getUserById(id)
-                .then((user: UserEntity) => {
-                    if (user) {
-                        this.emitter.emit("user", {
-                            method: "getOne",
-                            response: {user: user},
-                            code: OK_REQUEST_CODE
-                        });
-                        return res.status(OK_REQUEST_CODE).json({user: user});
-                    }
-                })
-                .catch(e => {
-                    this.emitter.emit("user", {
-                        method: "getOne",
-                        response: e,
-                        code: BAD_REQUEST_CODE
-                    });
-                    return res.status(BAD_REQUEST_CODE).json({message: e.message});
-                });
-        } catch (e) {
+        const id = Number(req.params.id);
+        if (!id || !Number.isFinite(id)) {
             this.emitter.emit("user", {
                 method: "getOne",
-                response: e,
+                response: new Error("invalid parameters"),
                 code: BAD_REQUEST_CODE
             });
-            return res.status(BAD_REQUEST_CODE).json({message: e.message});
+            return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
         }
-    }
-
-    public update (req: express.Request, res: express.Response): express.Response {
-        try {
-            if (!req.body.id) {
+        this.repository.getUserById(id)
+            .then((user: UserEntity) => {
+                if (user) {
+                    this.emitter.emit("user", {
+                        method: "getOne",
+                        response: {user: user},
+                        code: OK_REQUEST_CODE
+                    });
+                    return res.status(OK_REQUEST_CODE).json({user: user});
+                }
+            })
+            .catch(e => {
                 this.emitter.emit("user", {
-                    method: "update",
-                    response: new Error("invalid parameters"),
+                    method: "getOne",
+                    response: e,
                     code: BAD_REQUEST_CODE
                 });
-                return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
-            }
-            this.repository.getUserById(req.body.id)
-                .then((user: UserEntity) => {
-                    if (user) {
-                        // change user status
-                        if (req.body.email !== "") {
-                            user.email = req.body.email;
-                        }
-                        if (req.body.username !== "") {
-                            user.username = req.body.username;
-                        }
-                        if (user.enabled !== req.body.enabled) {
-                            this.emitter.emit("user", `change ${user.username} enabled/disabled`);
-                            user.enabled = req.body.enabled;
-                        }
-                        if (req.body.secret === "") {
-                            user.secret = req.body.secret;
-                            this.emitter.emit("user", `reset ${user.username} 2FA`);
-                        }
-                        if (req.body.roles) {
-                            user.roles = [...new Set(req.body.roles)] as number[];
-                        }
-                        if (req.body.accounts) {
-                            user.accounts = [...new Set(req.body.accounts)] as number[];
-                        }
-                        user.save()
+                return res.status(BAD_REQUEST_CODE).json({message: e.message});
+            });
+    }
+
+    /**
+     * put /api/v1/user
+     * @param req
+     * @param res
+     */
+    public update (req: express.Request, res: express.Response): express.Response {
+        if (!req.body.id) {
+            this.emitter.emit("user", {
+                method: "update",
+                response: new Error("invalid parameters"),
+                code: BAD_REQUEST_CODE
+            });
+            return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
+        }
+        this.repository.getUserById(req.body.id)
+            .then((user: UserEntity) => {
+                if (user) {
+                    // change user status
+                    if (req.body.email !== "") {
+                        user.email = req.body.email;
+                    }
+                    if (req.body.username !== "") {
+                        user.username = req.body.username;
+                    }
+                    if (user.enabled !== req.body.enabled) {
+                        this.emitter.emit("user", `change ${user.username} enabled/disabled`);
+                        user.enabled = req.body.enabled;
+                    }
+                    if (req.body.secret === "") {
+                        user.secret = req.body.secret;
+                        this.emitter.emit("user", `reset ${user.username} 2FA`);
+                    }
+                    if (req.body.roles) {
+                        user.roles = [...new Set(req.body.roles)] as number[];
+                    }
+                    if (req.body.accounts) {
+                        user.accounts = [...new Set(req.body.accounts)] as number[];
+                    }
+                    user.save()
                         .then((u: UserEntity) => {
                             const publicUser: PublicUser = {
                                 id: u.id,
@@ -228,33 +225,30 @@ export class UserController extends BaseController implements ICRUDController {
                             });
                             return res.status(OK_REQUEST_CODE).json({user: publicUser});
                         }).catch((e: Error) => {
-                            this.emitter.emit("user", {
-                                method: "update",
-                                response: e,
-                                code: BAD_REQUEST_CODE
-                            });
-                            return res.status(BAD_REQUEST_CODE).json({message: e.message});
+                        this.emitter.emit("user", {
+                            method: "update",
+                            response: e,
+                            code: BAD_REQUEST_CODE
                         });
-                    }
-                })
-                .catch(e => {
-                    this.emitter.emit("user", {
-                        method: "update",
-                        response: e,
-                        code: BAD_REQUEST_CODE
+                        return res.status(BAD_REQUEST_CODE).json({message: e.message});
                     });
-                    return res.status(BAD_REQUEST_CODE).json({message: e.message});
+                }
+            })
+            .catch(e => {
+                this.emitter.emit("user", {
+                    method: "update",
+                    response: e,
+                    code: BAD_REQUEST_CODE
                 });
-        } catch (e) {
-            this.emitter.emit("user", {
-                method: "update",
-                response: e,
-                code: BAD_REQUEST_CODE
+                return res.status(BAD_REQUEST_CODE).json({message: e.message});
             });
-            return res.status(BAD_REQUEST_CODE).json({message: e.message});
-        }
     }
 
+    /**
+     * post /api/v1/user
+     * @param req
+     * @param res
+     */
     public create (req: express.Request, res: express.Response): express.Response {
         try {
             const authController = new AuthController();
@@ -269,61 +263,57 @@ export class UserController extends BaseController implements ICRUDController {
         }
     }
 
+    /**
+     * Delete /api/v1/user
+     * @param req
+     * @param res
+     */
     public delete (req: express.Request, res: express.Response): express.Response {
-        try {
-            if (!req.body.id) {
-                this.emitter.emit("user", {
-                    method: "delete",
-                    response: new Error("invalid parameters"),
-                    code: BAD_REQUEST_CODE
-                });
-                return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
-            }
-            this.repository.getUserById(req.body.id)
-                .then(async (user: UserEntity) => {
-                    if (user) {
-                        try {
-                            const removedUser = await user.remove();
-                            const publicUser: PublicUser = {
-                                id: removedUser.id,
-                                username: removedUser.username,
-                                gravatar: removedUser.gravatar,
-                                email: removedUser.email,
-                                enabled: removedUser.enabled,
-                                removed: !!removedUser.removed,
-                                expired: null,
-                                token: null,
-                                roles: removedUser.roles,
-                                accounts: removedUser.accounts
-                            };
-                            this.emitter.emit("user", {
-                                method: "delete",
-                                response: {user: publicUser},
-                                code: OK_REQUEST_CODE
-                            });
-                            return res.status(OK_REQUEST_CODE).json({user: publicUser});
-                        } catch (e) {
-                            throw e;
-                        }
-                    } else {
-                        throw new Error("no user");
-                    }
-                })
-                .catch(e => {
-                    this.emitter.emit("user", {
-                        method: "delete",
-                        response: e,
-                        code: BAD_REQUEST_CODE
-                    });
-                    return res.status(BAD_REQUEST_CODE).json({message: e.message});
-                });
-        } catch (e) {
+        if (!req.body.id) {
             this.emitter.emit("user", {
                 method: "delete",
-                response: e,
+                response: new Error("invalid parameters"),
                 code: BAD_REQUEST_CODE
             });
-            return res.status(BAD_REQUEST_CODE).json({message: e.message});
+            return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
         }
+        this.repository.getUserById(req.body.id)
+            .then(async (user: UserEntity) => {
+                if (user) {
+                    try {
+                        const removedUser = await user.remove();
+                        const publicUser: PublicUser = {
+                            id: removedUser.id,
+                            username: removedUser.username,
+                            gravatar: removedUser.gravatar,
+                            email: removedUser.email,
+                            enabled: removedUser.enabled,
+                            removed: !!removedUser.removed,
+                            expired: null,
+                            token: null,
+                            roles: removedUser.roles,
+                            accounts: removedUser.accounts
+                        };
+                        this.emitter.emit("user", {
+                            method: "delete",
+                            response: {user: publicUser},
+                            code: OK_REQUEST_CODE
+                        });
+                        return res.status(OK_REQUEST_CODE).json({user: publicUser});
+                    } catch (e) {
+                        throw e;
+                    }
+                } else {
+                    throw new Error("no user");
+                }
+            })
+            .catch(e => {
+                this.emitter.emit("user", {
+                    method: "delete",
+                    response: e,
+                    code: BAD_REQUEST_CODE
+                });
+                return res.status(BAD_REQUEST_CODE).json({message: e.message});
+            });
     }
 }

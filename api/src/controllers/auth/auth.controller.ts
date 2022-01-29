@@ -230,7 +230,6 @@ export class AuthController extends BaseController implements IAuthController {
      */
     public ga2fa (req: express.Request, res: express.Response): express.Response {
         const credentials = req.body;
-        console.log(credentials);
         if (credentials.id) {
             const repository = Service.getService<UserRepository>(USER_REPOSITORY_SERVICE);
             try {
@@ -292,12 +291,23 @@ export class AuthController extends BaseController implements IAuthController {
                                                         status: verified,
                                                         data: r.data
                                                     });
-                                                }).catch(e => {
-                                                    throw e;
+                                                })
+                                                .catch(e => {
+                                                    this.emitter.emit("auth", {
+                                                        method: "ga2fa",
+                                                        response: e,
+                                                        code: UNAUTHORIZED_REQUEST_CODE
+                                                    });
+                                                    return res.status(UNAUTHORIZED_REQUEST_CODE).json({ message: e.message });
                                                 });
                                         })
                                         .catch(e => {
-                                            throw e;
+                                            this.emitter.emit("auth", {
+                                                method: "ga2fa",
+                                                response: e,
+                                                code: UNAUTHORIZED_REQUEST_CODE
+                                            });
+                                            return res.status(UNAUTHORIZED_REQUEST_CODE).json({ message: e.message });
                                         });
                                     })
                                     .catch(e => {

@@ -50,7 +50,7 @@ export class UserRepository implements IUserServiceRepository {
         return `https://gravatar.com/avatar/${md5}?s=${size}&d=retro`;
     }
 
-    private getUser(field: string, id: any): Promise<UserEntity[]> {
+    private getUser(field: string, id: number | string): Promise<UserEntity[]> {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = await this.database.query(`
@@ -156,6 +156,7 @@ export class UserRepository implements IUserServiceRepository {
     }
 
     public getUserById(id: number): Promise<UserEntity> {
+        // transform array to one entity
         return new Promise((resolve, reject) => {
             this.getUser("id", id)
                 .then((users: UserEntity[]) => {
@@ -172,6 +173,7 @@ export class UserRepository implements IUserServiceRepository {
     }
 
     public getUserByEmail(email: string): Promise<UserEntity> {
+        // transform array to one entity
         return new Promise((resolve, reject) => {
             this.getUser("email", email)
                 .then((users: UserEntity[]) => {
@@ -188,6 +190,7 @@ export class UserRepository implements IUserServiceRepository {
     }
 
     public getUserByUsername(username: string): Promise<UserEntity>  {
+        // transform array to one entity
         return new Promise((resolve, reject) => {
             this.getUser("username", username)
                 .then((users: UserEntity[]) => {
@@ -309,7 +312,7 @@ export class UserRepository implements IUserServiceRepository {
                             ]);
 
                 } catch (e) {
-                    console.log(e);
+                    reject(e);
                 }
                 resolve(_user);
             } catch (e) {
@@ -320,6 +323,7 @@ export class UserRepository implements IUserServiceRepository {
 
     public update(user: UserEntity): Promise<UserEntity> {
         return new Promise(async (resolve, reject) => {
+            // use multiple try catch to monitor error for every db request
             try {
                 if (user.id === ROOT_ID && !!user.enabled === false) {
                     throw new Error(`${user.username} cannot be disabled`);
