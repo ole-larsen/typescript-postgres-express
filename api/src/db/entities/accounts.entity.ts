@@ -1,5 +1,5 @@
 import {Service} from "../../services/app.service";
-import {ACCOUNT_REPOSITORY_SERVICE} from "../../services/constants";
+import {ACCOUNT_REPOSITORY_SERVICE} from "../../services/app.constants";
 import {AccountRepository} from "../storage/postgres/repository/account.repository";
 
 export class AccountEntity {

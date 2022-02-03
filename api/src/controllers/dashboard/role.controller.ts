@@ -7,7 +7,7 @@ import {
     OK_REQUEST_CODE
 } from "../base.controller";
 import {RoleRepository} from "../../db/storage/postgres/repository/role.repository";
-import {EMITTER_SERVICE, ROLE_REPOSITORY_SERVICE} from "../../services/constants";
+import {EMITTER_SERVICE, ROLE_REPOSITORY_SERVICE} from "../../services/app.constants";
 import {Service} from "../../services/app.service";
 import {RoleEntity} from "../../db/entities/roles.entity";
 import EventEmitter from "events";
@@ -44,7 +44,7 @@ export class RoleController extends BaseController implements ICRUDController {
         const {id, title, enabled} = req.query;
         if (id) {
             if (Number.isFinite(Number(id))) {
-                this.repository.getRoleById(Number(id as string))
+                this.repository.getById(Number(id as string))
                     .then((role: RoleEntity) => {
                         this.emitter.emit("role", {
                             method: "get",
@@ -72,7 +72,7 @@ export class RoleController extends BaseController implements ICRUDController {
             }
         }
         if (title) {
-            this.repository.getRoleByTitle(title as string)
+            this.repository.getByName(title as string)
                 .then((role: RoleEntity) => {
                     this.emitter.emit("role", {
                         method: "get",
@@ -92,7 +92,7 @@ export class RoleController extends BaseController implements ICRUDController {
                 });
         }
         if (enabled) {
-            this.repository.getRolesByEnabled(enabled as string === "true")
+            this.repository.getByEnabled(enabled as string === "true")
                 .then((roles: RoleEntity[]) => {
                     this.emitter.emit("role", {
                         method: "get",
@@ -111,7 +111,7 @@ export class RoleController extends BaseController implements ICRUDController {
                     return res.status(BAD_REQUEST_CODE).json({message: e.message});
                 });
         }
-        this.repository.getRoles()
+        this.repository.get()
             .then((roles: RoleEntity[]) => {
                 this.emitter.emit("role", {
                     method: "get",
@@ -140,12 +140,12 @@ export class RoleController extends BaseController implements ICRUDController {
         if (!id || !Number.isFinite(id)) {
             this.emitter.emit("role", {
                 method: "getOne",
-                response: new Error("invalid parameters"),
+                response: "invalid parameters",
                 code: BAD_REQUEST_CODE
             });
             return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
         }
-        this.repository.getRoleById(id)
+        this.repository.getById(id)
             .then((role: RoleEntity) => {
                 if (role) {
                     this.emitter.emit("role", {
@@ -177,12 +177,12 @@ export class RoleController extends BaseController implements ICRUDController {
         if (!req.body.id) {
             this.emitter.emit("role", {
                 method: "update",
-                response: new Error("invalid parameters"),
+                response: "invalid parameters",
                 code: BAD_REQUEST_CODE
             });
             return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
         }
-        this.repository.getRoleById(req.body.id)
+        this.repository.getById(req.body.id)
             .then((role: RoleEntity) => {
                 if (role) {
                     // change role status
@@ -236,17 +236,15 @@ export class RoleController extends BaseController implements ICRUDController {
      */
     public create (req: express.Request, res: express.Response): express.Response {
         try {
-            const credentials = req.body;
-            if (credentials.title === "") {
+            if (req.body.title === "") {
                 throw new Error(ERROR_ROLE_EMPTY_TITLE);
             }
-            if (credentials.description === "") {
+            if (req.body.description === "") {
                 throw new Error(ERROR_ROLE_EMPTY_DESCRIPTION);
             }
-            if (credentials.title !== "") {
-                (async () => {
-                    try {
-                        const role = await this.repository.getRoleByTitle(credentials.title);
+            if (req.body.title !== "") {
+                this.repository.getByName(req.body.title)
+                    .then(async (role: RoleEntity) => {
                         if (role) {
                             if (role.removed !== null) {
                                 role.removed = undefined;
@@ -258,32 +256,38 @@ export class RoleController extends BaseController implements ICRUDController {
                                 });
                                 return res.status(OK_REQUEST_CODE).json({role: await role.save()});
                             } else {
-                                throw new Error("role exists");
+                                this.emitter.emit("role", {
+                                    method: "create",
+                                    response: "role exist",
+                                    code: BAD_REQUEST_CODE
+                                });
+                                return res.status(BAD_REQUEST_CODE).json({message: "role exist"});
                             }
+                        } else {
+                            this.repository
+                                .create(new RoleEntity(
+                                    null,
+                                    req.body.title,
+                                    req.body.description,
+                                    req.body.enabled
+                                ))
+                                .then((role: RoleEntity) => {
+                                    this.emitter.emit("role", {
+                                        method: "create",
+                                        response: {role: role},
+                                        code: OK_REQUEST_CODE
+                                    });
+                                    return res.status(OK_REQUEST_CODE).json({role: role});
+                                })
+                                .catch(e => {
+                                    this.emitter.emit("role", {
+                                        method: "create",
+                                        response: e,
+                                        code: BAD_REQUEST_CODE
+                                    });
+                                    return res.status(BAD_REQUEST_CODE).json({message: e.message});
+                                });
                         }
-                    } catch (e) {
-                        this.emitter.emit("role", {
-                            method: "create",
-                            response: e,
-                            code: BAD_REQUEST_CODE
-                        });
-                        return res.status(BAD_REQUEST_CODE).json({message: e.message});
-                    }
-                })();
-                this.repository
-                    .create(new RoleEntity(
-                        null,
-                        credentials.title,
-                        credentials.description,
-                        credentials.enabled
-                    ))
-                    .then((role: RoleEntity) => {
-                        this.emitter.emit("role", {
-                            method: "create",
-                            response: {role: role},
-                            code: OK_REQUEST_CODE
-                        });
-                        return res.status(OK_REQUEST_CODE).json({role: role});
                     })
                     .catch(e => {
                         this.emitter.emit("role", {
@@ -308,12 +312,12 @@ export class RoleController extends BaseController implements ICRUDController {
         if (!req.body.id) {
             this.emitter.emit("role", {
                 method: "delete",
-                response: new Error("invalid parameters"),
+                response: "invalid parameters",
                 code: BAD_REQUEST_CODE
             });
             return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
         }
-        this.repository.getRoleById(req.body.id)
+        this.repository.getById(req.body.id)
             .then((role: RoleEntity) => {
                 if (role) {
                     role.remove()

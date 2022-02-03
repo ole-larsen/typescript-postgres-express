@@ -77,7 +77,7 @@ services:
       - POSTGRES_DB=services
       - PGDATA=/var/lib/postgresql/data/pgdata
     ports:
-      - 5432:5432
+      - "5432:5432"
     healthcheck:
       test: [ "CMD", "pg_isready" , "-U", "trade" ]
       interval: 30s
@@ -89,6 +89,27 @@ services:
       - ./docker/postgresql/db:/var/lib/postgresql/data/pgdata
       - ./docker/postgresql:/etc/postgesql
     command: postgres -c config_file=/etc/postgesql/postgresql.conf
+  app001-postgres-test:
+    image: timescale/timescaledb:2.5.1-pg14
+    container_name: app001-postgres-test
+    environment:
+      - POSTGRES_USER=services
+      - POSTGRES_PASSWORD=services
+      - POSTGRES_DB=services
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5433"
+    healthcheck:
+      test: [ "CMD", "pg_isready" , "-U", "trade" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - service-web
+    volumes:
+      - ./docker/postgresql/db-test:/var/lib/postgresql/data/pgdata
+      - ./docker/postgresql:/etc/postgesql
+    command: postgres -c config_file=/etc/postgesql/postgresql-test.conf
   app001-migrator:
     links:
       - app001-postgres
@@ -98,7 +119,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - DATABASE_URL=postgresql://services:trade@postgres:5432/trade
+      - DATABASE_URL=postgresql://services:services@app001-postgres:5432/services
     entrypoint: npm run migration:run
 networks:
   service-web:

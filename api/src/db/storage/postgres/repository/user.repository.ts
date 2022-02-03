@@ -1,5 +1,5 @@
 import {Pool} from "pg";
-import {POSTGRES_SERVICE} from "../../../../services/constants";
+import {POSTGRES_SERVICE} from "../../../../services/app.constants";
 import {Service} from "../../../../services/app.service";
 import {IUserServiceRepository} from "../../../interfaces/user.interface";
 import {ROOT_ID, UserEntity} from "../../../entities/users.entity";
@@ -50,33 +50,101 @@ export class UserRepository implements IUserServiceRepository {
         return `https://gravatar.com/avatar/${md5}?s=${size}&d=retro`;
     }
 
-    private getUser(field: string, id: number | string): Promise<UserEntity[]> {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const result = await this.database.query(`
-                    SELECT ${this.usersTable}.id,
-                           ${this.usersTable}.username,
-                           ${this.usersTable}.email,
-                           ${this.usersTable}.password,
-                           ${this.usersTable}.enabled,
-                           ${this.usersTable}.secret,
-                           ${this.usersTable}.gravatar,
-                           ${this.usersTable}.password_reset_token,
-                           ${this.usersTable}.password_reset_expires,
-                           ${this.usersTable}.created,
-                           ${this.usersTable}.updated,
-                           ${this.usersTable}.removed,
-                           array_remove(ARRAY_AGG(${this.rolesTable}.id), NULL) ${this.rolesTable},
-                           array_remove(ARRAY_AGG(${this.accountsTable}.id), NULL) ${this.accountsTable}
-                    FROM ${this.usersTable}
-                    LEFT JOIN ${this.userRoleTable} ON (${this.userRoleTable}.user_id = ${this.usersTable}.id)
-                    LEFT JOIN ${this.rolesTable} ON (${this.rolesTable}.id = ${this.userRoleTable}.role_id)
-                    
-                    LEFT JOIN ${this.userAccountTable} ON (${this.userAccountTable}.user_id = ${this.usersTable}.id)
-                    LEFT JOIN ${this.accountsTable} ON (${this.accountsTable}.id = ${this.userAccountTable}.account_id)
-                    
-                    WHERE ${this.usersTable}."${field}" = $1
-                    GROUP BY ${this.usersTable}.id;`, [id]);
+    private getOne(field: string, id: number | string): Promise<UserEntity[]> {
+        return new Promise((resolve, reject) => {
+            this.database.query(`
+                SELECT ${this.usersTable}.id,
+                       ${this.usersTable}.username,
+                       ${this.usersTable}.email,
+                       ${this.usersTable}.password,
+                       ${this.usersTable}.enabled,
+                       ${this.usersTable}.secret,
+                       ${this.usersTable}.gravatar,
+                       ${this.usersTable}.password_reset_token,
+                       ${this.usersTable}.password_reset_expires,
+                       ${this.usersTable}.created,
+                       ${this.usersTable}.updated,
+                       ${this.usersTable}.removed,
+                       array_remove(ARRAY_AGG(${this.rolesTable}.id), NULL)    ${this.rolesTable},
+                       array_remove(ARRAY_AGG(${this.accountsTable}.id), NULL) ${this.accountsTable}
+                FROM ${this.usersTable}
+                         LEFT JOIN ${this.userRoleTable} ON (${this.userRoleTable}.user_id = ${this.usersTable}.id)
+                         LEFT JOIN ${this.rolesTable} ON (${this.rolesTable}.id = ${this.userRoleTable}.role_id)
+
+                         LEFT JOIN ${this.userAccountTable} ON (${this.userAccountTable}.user_id = ${this.usersTable}.id)
+                         LEFT JOIN ${this.accountsTable} ON (${this.accountsTable}.id = ${this.userAccountTable}.account_id)
+
+                WHERE ${this.usersTable}."${field}" = $1
+                GROUP BY ${this.usersTable}.id;`, [id])
+                .then((result) => {
+                    const users = result.rows.map(row => {
+                        return new UserEntity(
+                            row.id,
+                            row.username,
+                            row.email,
+                            row.password,
+                            row.enabled,
+                            row.secret,
+                            row.gravatar,
+                            row.password_reset_token,
+                            row.password_reset_expires,
+                            row.created,
+                            row.updated,
+                            row.removed,
+                            row.roles,
+                            row.accounts);
+                    });
+                    resolve(users);
+                })
+                .catch(e => reject(e));
+        });
+    }
+
+    public getByUsername(username: string): Promise<UserEntity>  {
+        // transform array to one entity
+        return new Promise((resolve, reject) => {
+            this.getOne("username", username)
+                .then((users: UserEntity[]) => {
+                    if (users.length > 0) {
+                        resolve(users[0]);
+                    } else {
+                        resolve(null);
+                    }
+                })
+                .catch(e => {
+                    reject(e);
+                });
+        });
+    }
+
+    public getByPasswordResetToken(token: string): Promise<UserEntity> {
+        return new Promise((resolve, reject) => {
+            this.database.query(`
+                SELECT ${this.usersTable}.id,
+                       ${this.usersTable}.username,
+                       ${this.usersTable}.email,
+                       ${this.usersTable}.password,
+                       ${this.usersTable}.enabled,
+                       ${this.usersTable}.secret,
+                       ${this.usersTable}.gravatar,
+                       ${this.usersTable}.password_reset_token,
+                       ${this.usersTable}.password_reset_expires,
+                       ${this.usersTable}.created,
+                       ${this.usersTable}.updated,
+                       ${this.usersTable}.removed,
+                       array_remove(ARRAY_AGG(${this.rolesTable}.id), NULL) ${this.rolesTable},
+                       array_remove(ARRAY_AGG(${this.accountsTable}.id), NULL) ${this.accountsTable}
+                FROM ${this.usersTable}
+                LEFT JOIN ${this.userRoleTable} ON (${this.userRoleTable}.user_id = ${this.usersTable}.id)
+                LEFT JOIN ${this.rolesTable} ON (${this.rolesTable}.id = ${this.userRoleTable}.role_id)
+                
+                LEFT JOIN ${this.userAccountTable} ON (${this.userAccountTable}.user_id = ${this.usersTable}.id)
+                LEFT JOIN ${this.accountsTable} ON (${this.accountsTable}.id = ${this.userAccountTable}.account_id)
+                
+                WHERE ${this.usersTable}.password_reset_token = $1
+                AND    ${this.usersTable}.password_reset_expires >= FLOOR(EXTRACT(epoch FROM NOW()) * 1000)
+                GROUP BY ${this.usersTable}.id;`, [token])
+            .then((result) => {
                 const users = result.rows.map(row => {
                     return new UserEntity(
                         row.id,
@@ -94,17 +162,21 @@ export class UserRepository implements IUserServiceRepository {
                         row.roles,
                         row.accounts);
                 });
-                resolve(users);
-            } catch (e) {
-                reject(e);
-            }
+                if (users.length === 1) {
+                    resolve(users[0]);
+                } else {
+                    resolve(null);
+                }
+            })
+                .catch(e => reject(e));
+
         });
     }
 
     /**
      * get all users
      */
-    public getUsers(): Promise<UserEntity[]> {
+    public get(): Promise<UserEntity[]> {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = await this.database.query(`
@@ -155,10 +227,10 @@ export class UserRepository implements IUserServiceRepository {
         });
     }
 
-    public getUserById(id: number): Promise<UserEntity> {
+    public getById(id: number): Promise<UserEntity> {
         // transform array to one entity
         return new Promise((resolve, reject) => {
-            this.getUser("id", id)
+            this.getOne("id", id)
                 .then((users: UserEntity[]) => {
                     if (users.length > 0) {
                         resolve(users[0]);
@@ -172,10 +244,10 @@ export class UserRepository implements IUserServiceRepository {
         });
     }
 
-    public getUserByEmail(email: string): Promise<UserEntity> {
+    public getByName(email: string): Promise<UserEntity> {
         // transform array to one entity
         return new Promise((resolve, reject) => {
-            this.getUser("email", email)
+            this.getOne("email", email)
                 .then((users: UserEntity[]) => {
                     if (users.length > 0) {
                         resolve(users[0]);
@@ -186,79 +258,6 @@ export class UserRepository implements IUserServiceRepository {
                 .catch(e => {
                     reject(e);
                 });
-        });
-    }
-
-    public getUserByUsername(username: string): Promise<UserEntity>  {
-        // transform array to one entity
-        return new Promise((resolve, reject) => {
-            this.getUser("username", username)
-                .then((users: UserEntity[]) => {
-                    if (users.length > 0) {
-                        resolve(users[0]);
-                    } else {
-                        resolve(null);
-                    }
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
-    }
-
-    public getUserByPasswordResetToken(token: string): Promise<UserEntity> {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const result = await this.database.query(`
-                    SELECT ${this.usersTable}.id,
-                           ${this.usersTable}.username,
-                           ${this.usersTable}.email,
-                           ${this.usersTable}.password,
-                           ${this.usersTable}.enabled,
-                           ${this.usersTable}.secret,
-                           ${this.usersTable}.gravatar,
-                           ${this.usersTable}.password_reset_token,
-                           ${this.usersTable}.password_reset_expires,
-                           ${this.usersTable}.created,
-                           ${this.usersTable}.updated,
-                           ${this.usersTable}.removed,
-                           array_remove(ARRAY_AGG(${this.rolesTable}.id), NULL) ${this.rolesTable},
-                           array_remove(ARRAY_AGG(${this.accountsTable}.id), NULL) ${this.accountsTable}
-                    FROM ${this.usersTable}
-                    LEFT JOIN ${this.userRoleTable} ON (${this.userRoleTable}.user_id = ${this.usersTable}.id)
-                    LEFT JOIN ${this.rolesTable} ON (${this.rolesTable}.id = ${this.userRoleTable}.role_id)
-                    
-                    LEFT JOIN ${this.userAccountTable} ON (${this.userAccountTable}.user_id = ${this.usersTable}.id)
-                    LEFT JOIN ${this.accountsTable} ON (${this.accountsTable}.id = ${this.userAccountTable}.account_id)
-                    
-                    WHERE ${this.usersTable}.password_reset_token = $1
-                    AND    ${this.usersTable}.password_reset_expires >= FLOOR(EXTRACT(epoch FROM NOW()) * 1000)
-                    GROUP BY ${this.usersTable}.id;`, [token]);
-                const users = result.rows.map(row => {
-                    return new UserEntity(
-                        row.id,
-                        row.username,
-                        row.email,
-                        row.password,
-                        row.enabled,
-                        row.secret,
-                        row.gravatar,
-                        row.password_reset_token,
-                        row.password_reset_expires,
-                        row.created,
-                        row.updated,
-                        row.removed,
-                        row.roles,
-                        row.accounts);
-                });
-                if (users.length === 1) {
-                    resolve(users[0]);
-                } else {
-                    resolve(null);
-                }
-            } catch (e) {
-                reject(e);
-            }
         });
     }
 
@@ -281,7 +280,7 @@ export class UserRepository implements IUserServiceRepository {
                         true
                     ]
                 );
-                const _user = await this.getUserByEmail(user.email);
+                const _user = await this.getByName(user.email);
                 // add superadmin role
                 try {
                     let roleId = 3;
@@ -401,7 +400,7 @@ export class UserRepository implements IUserServiceRepository {
                 } catch (e) {
                     throw e;
                 }
-                resolve(this.getUserById(user.id));
+                resolve(this.getById(user.id));
             } catch (e) {
                 reject(e);
             }
@@ -435,19 +434,31 @@ export class UserRepository implements IUserServiceRepository {
                     throw e;
                 }
                 try {
-                    await this.database.query(
-                        `UPDATE ${this.usersTable}
+                    if (process.env.NODE_ENV === "test") {
+                        await this.database.query(
+            `DELETE FROM ${this.usersTable}
+                                 WHERE id = $1;`,
+                            [
+                                user.id
+                            ]
+                        );
+                    } else {
+                        await this.database.query(
+                            `UPDATE ${this.usersTable}
                          SET removed = NOW(),
                              enabled = FALSE
                              WHERE id = $1 RETURNING *;`,
-                        [
-                            user.id
-                        ]
-                    );
+                            [
+                                user.id
+                            ]
+                        );
+                    }
                 } catch (e) {
                     throw e;
                 }
-                resolve(this.getUserById(user.id));
+                user.removed = new Date();
+                user.enabled = false;
+                resolve(user);
             } catch (e) {
                 reject(e);
             }

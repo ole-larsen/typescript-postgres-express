@@ -4,10 +4,10 @@ import { RoleEntity } from "../entities/roles.entity";
  * Role Service interface for binding
  */
 export interface IRoleServiceRepository {
-    getRoles(): Promise<RoleEntity[]>
-    getRolesByEnabled(enabled: boolean): Promise<RoleEntity[]>
-    getRoleById(id: number): Promise<RoleEntity>
-    getRoleByTitle(title: string): Promise<RoleEntity>
+    get(): Promise<RoleEntity[]>
+    getByEnabled(enabled: boolean): Promise<RoleEntity[]>
+    getById(id: number): Promise<RoleEntity>
+    getByName(title: string): Promise<RoleEntity>
 
     update(role: RoleEntity): Promise<RoleEntity>
     create(role: RoleEntity): Promise<RoleEntity>

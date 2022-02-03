@@ -2,6 +2,7 @@ FROM node:16-alpine AS build
 WORKDIR /server
 COPY package.json .
 COPY package-lock.json .
+COPY tsconfig.json .
 RUN npm install
 COPY . .
 RUN npm run build

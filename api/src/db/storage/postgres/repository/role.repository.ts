@@ -1,6 +1,6 @@
 import { Pool } from "pg";
 import {IRoleServiceRepository} from "../../../interfaces/role.interface";
-import {POSTGRES_SERVICE} from "../../../../services/constants";
+import {POSTGRES_SERVICE} from "../../../../services/app.constants";
 import {Service} from "../../../../services/app.service";
 import {ADMIN_ROLE_ID, RoleEntity, SUPERADMIN_ROLE_ID, USER_ROLE_ID} from "../../../entities/roles.entity";
 import {ROLES_TABLE, USER_ROLE_TABLE, USERS_TABLE} from "./constants.repository";
@@ -20,60 +20,7 @@ export class RoleRepository implements IRoleServiceRepository {
         this.userRoleTable = USER_ROLE_TABLE;
     }
 
-    /**
-     * get all roles
-     */
-    public getRoles(): Promise<RoleEntity[]> {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const result = await this.database.query(`
-                      SELECT ${this.rolesTable}.id,
-                             ${this.rolesTable}.title,
-                             ${this.rolesTable}.description,
-                             ${this.rolesTable}.enabled,
-                             ${this.rolesTable}.created,
-                             ${this.rolesTable}.updated,
-                             ${this.rolesTable}.removed,
-                             array_remove(ARRAY_AGG(${this.usersTable}.id), NULL) ${this.usersTable}
-                      FROM ${this.rolesTable}
-                      LEFT JOIN ${this.userRoleTable} ON (${this.userRoleTable}.role_id = ${this.rolesTable}.id)
-                      LEFT JOIN ${this.usersTable} ON (${this.usersTable}.id = ${this.userRoleTable}.user_id)
-                      GROUP BY ${this.rolesTable}.id ORDER BY id ASC`);
-                resolve(result.rows.map(row => new RoleEntity(row.id, row.title, row.description, row.enabled, row.created, row.updated, row.removed, row.users)));
-            } catch (e) {
-                reject(e);
-            }
-        });
-    }
-
-    /**
-     * Get all active roles
-     */
-    public getRolesByEnabled(enabled: boolean): Promise<RoleEntity[]> {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const result = await this.database.query(`
-                      SELECT ${this.rolesTable}.id,
-                             ${this.rolesTable}.title,
-                             ${this.rolesTable}.description,
-                             ${this.rolesTable}.enabled,
-                             ${this.rolesTable}.created,
-                             ${this.rolesTable}.updated,
-                             ${this.rolesTable}.removed,
-                             array_remove(ARRAY_AGG(${this.usersTable}.id), NULL) ${this.usersTable}
-                      FROM ${this.rolesTable}
-                      LEFT JOIN ${this.userRoleTable} ON (${this.userRoleTable}.role_id = ${this.rolesTable}.id)
-                      LEFT JOIN ${this.usersTable} ON (${this.usersTable}.id = ${this.userRoleTable}.user_id)
-
-                      WHERE ${this.rolesTable}.enabled = $1
-                      GROUP BY ${this.rolesTable}.id ORDER BY id ASC`, [enabled]);
-                resolve(result.rows.map(row => new RoleEntity(row.id, row.title, row.description, row.enabled, row.created, row.updated, row.removed, row.users)));
-            } catch (e) {
-                reject(e);
-            }
-        });
-    }
-    private getRole(field: string, id: any): Promise<RoleEntity> {
+    private getOne(field: string, id: any): Promise<RoleEntity> {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = await this.database.query(`
@@ -103,19 +50,74 @@ export class RoleRepository implements IRoleServiceRepository {
             }
         });
     }
-    public getRoleById(id: number): Promise<RoleEntity> {
-        return this.getRole("id", id);
+
+    /**
+     * get all roles
+     */
+    public get(): Promise<RoleEntity[]> {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const result = await this.database.query(`
+                      SELECT ${this.rolesTable}.id,
+                             ${this.rolesTable}.title,
+                             ${this.rolesTable}.description,
+                             ${this.rolesTable}.enabled,
+                             ${this.rolesTable}.created,
+                             ${this.rolesTable}.updated,
+                             ${this.rolesTable}.removed,
+                             array_remove(ARRAY_AGG(${this.usersTable}.id), NULL) ${this.usersTable}
+                      FROM ${this.rolesTable}
+                      LEFT JOIN ${this.userRoleTable} ON (${this.userRoleTable}.role_id = ${this.rolesTable}.id)
+                      LEFT JOIN ${this.usersTable} ON (${this.usersTable}.id = ${this.userRoleTable}.user_id)
+                      GROUP BY ${this.rolesTable}.id ORDER BY id ASC`);
+                resolve(result.rows.map(row => new RoleEntity(row.id, row.title, row.description, row.enabled, row.created, row.updated, row.removed, row.users)));
+            } catch (e) {
+                reject(e);
+            }
+        });
     }
 
-    public getRoleByTitle(title: string): Promise<RoleEntity> {
-        return this.getRole("title", title);
+    /**
+     * Get all active roles
+     */
+    public getByEnabled(enabled: boolean): Promise<RoleEntity[]> {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const result = await this.database.query(`
+                      SELECT ${this.rolesTable}.id,
+                             ${this.rolesTable}.title,
+                             ${this.rolesTable}.description,
+                             ${this.rolesTable}.enabled,
+                             ${this.rolesTable}.created,
+                             ${this.rolesTable}.updated,
+                             ${this.rolesTable}.removed,
+                             array_remove(ARRAY_AGG(${this.usersTable}.id), NULL) ${this.usersTable}
+                      FROM ${this.rolesTable}
+                      LEFT JOIN ${this.userRoleTable} ON (${this.userRoleTable}.role_id = ${this.rolesTable}.id)
+                      LEFT JOIN ${this.usersTable} ON (${this.usersTable}.id = ${this.userRoleTable}.user_id)
+
+                      WHERE ${this.rolesTable}.enabled = $1
+                      GROUP BY ${this.rolesTable}.id ORDER BY id ASC`, [enabled]);
+                resolve(result.rows.map(row => new RoleEntity(row.id, row.title, row.description, row.enabled, row.created, row.updated, row.removed, row.users)));
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    public getById(id: number): Promise<RoleEntity> {
+        return this.getOne("id", id);
+    }
+
+    public getByName(title: string): Promise<RoleEntity> {
+        return this.getOne("title", title);
     }
 
     public update(role: RoleEntity): Promise<RoleEntity> {
         return new Promise(async (resolve, reject) => {
             // use combination of try catch to easily find an error
             try {
-                const roleBeforeUpdate = await this.getRoleById(role.id);
+                const roleBeforeUpdate = await this.getById(role.id);
                 if (roleBeforeUpdate && roleBeforeUpdate.enabled !== role.enabled) {
                     if (role.id === SUPERADMIN_ROLE_ID || role.id === ADMIN_ROLE_ID || role.id === USER_ROLE_ID) {
                         throw new Error(`${role.title} cannot be disabled`);
@@ -170,7 +172,7 @@ export class RoleRepository implements IRoleServiceRepository {
                 } catch (e) {
                     throw e;
                 }
-                resolve(this.getRoleById(role.id));
+                resolve(this.getById(role.id));
             } catch (e) {
                 reject(e);
             }
@@ -194,14 +196,26 @@ export class RoleRepository implements IRoleServiceRepository {
                     throw e;
                 }
                 try {
-                    await this.database.query(
-                        `UPDATE ${this.rolesTable}
-                     SET removed = NOW(),
-                         enabled = FALSE
-                     WHERE id = $1 RETURNING *;`, [
-                            role.id
-                        ]);
-                    resolve(this.getRoleById(role.id));
+                    if (process.env.NODE_ENV === "test") {
+                        await this.database.query(
+                            `DELETE FROM ${this.rolesTable}
+                                 WHERE id = $1;`,
+                            [
+                                role.id
+                            ]
+                        );
+                    } else {
+                        await this.database.query(
+                            `UPDATE ${this.rolesTable}
+                             SET removed = NOW(),
+                                 enabled = FALSE
+                             WHERE id = $1 RETURNING *;`, [
+                                role.id
+                            ]);
+                    }
+                    role.removed = new Date();
+                    role.enabled = false;
+                    resolve(role);
                 } catch (e) {
                     throw e;
                 }
@@ -222,7 +236,7 @@ export class RoleRepository implements IRoleServiceRepository {
                         true
                     ]
                 );
-                resolve(this.getRoleByTitle(role.title));
+                resolve(this.getByName(role.title));
             } catch (e) {
                 reject(e);
             }

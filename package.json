@@ -2,11 +2,6 @@
     "name": "vue-express-postgres-starter",
     "version": "0.0.1",
     "description": "A starting point for Node.js express app with TypeScript, Vue JS, Postgres",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/olelarssen/typescript-postgres-express"
-    },
-    "author": "Bowden Kelly",
     "license": "MIT",
     "scripts": {
         "build-ts": "tsc",
@@ -17,15 +12,15 @@
         "serve-debug": "nodemon --inspect dist/server.js",
         "serve": "node build/app.js",
         "start": "npm run serve",
-        "test": "jest --forceExit --coverage --verbose",
+        "test": "NODE_ENV=test SERVER_PORT=3009 jest --forceExit --verbose --detectOpenHandles",
         "watch-debug": "concurrently -k -p \"[{name}]\" -n \"Sass,TypeScript,Node\" -c \"yellow.bold,cyan.bold,green.bold\" \"npm run watch-ts\" \"npm run serve-debug\"",
         "watch-node": "nodemon build/app.js",
         "watch-test": "npm run test -- --watchAll",
         "watch-ts": "tsc -w",
         "watch": "concurrently -k -p \"[{name}]\" -n \"Sass,TypeScript,Node\" -c \"yellow.bold,cyan.bold,green.bold\" \"npm run watch-ts\" \"npm run watch-node\"",
         "migration:create": "node-pg-migrate create -j sql -m migrations -t __migrations --decamelize true",
-        "migration:run": "node-pg-migrate up -j sql -m migrations -t __migrations --decamelize true",
-        "migration:down": "node-pg-migrate down -j sql -m migrations -t __migrations --decamelize true"
+        "migration:run":    "node-pg-migrate up     -j sql -m migrations -t __migrations --decamelize true",
+        "migration:down":   "node-pg-migrate down   -j sql -m migrations -t __migrations --decamelize true"
     },
     "dependencies": {
         "@types/connect-mongo": "^3.1.3",

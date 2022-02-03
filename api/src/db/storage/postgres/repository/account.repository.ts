@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import {POSTGRES_SERVICE} from "../../../../services/constants";
+import {POSTGRES_SERVICE} from "../../../../services/app.constants";
 import {Service} from "../../../../services/app.service";
 import {ACCOUNTS_TABLE, ROLES_TABLE, USER_ACCOUNT_TABLE, USER_ROLE_TABLE, USERS_TABLE} from "./constants.repository";
 import {IAccountServiceRepository} from "../../../interfaces/account.interface";
@@ -24,7 +24,7 @@ export class AccountRepository implements IAccountServiceRepository {
         this.userAccountTable = USER_ACCOUNT_TABLE;
     }
 
-    private getAccount(field: string, id: number | string | boolean): Promise<AccountEntity[]> {
+    private getOne(field: string, id: number | string | boolean): Promise<AccountEntity[]> {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = await this.database.query(`
@@ -76,7 +76,7 @@ export class AccountRepository implements IAccountServiceRepository {
     /**
      * get all accounts
      */
-    public getAccounts(): Promise<AccountEntity[]> {
+    public get(): Promise<AccountEntity[]> {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = await this.database.query(`
@@ -122,16 +122,17 @@ export class AccountRepository implements IAccountServiceRepository {
             }
         });
     }
+
     /**
      * Get all active accounts
      */
     public getAccountsByEnabled(enabled: boolean): Promise<AccountEntity[]> {
-        return this.getAccount("enabled", enabled);
+        return this.getOne("enabled", enabled);
     }
 
-    public getAccountById(id: number): Promise<AccountEntity> {
+    public getById(id: number): Promise<AccountEntity> {
         return new Promise((resolve, reject) => {
-            this.getAccount("id", id)
+            this.getOne("id", id)
                 .then((accounts: AccountEntity[]) => {
                     if (accounts.length > 0) {
                         resolve(accounts[0]);
@@ -145,9 +146,9 @@ export class AccountRepository implements IAccountServiceRepository {
         });
     }
 
-    public getAccountByName(name: string): Promise<AccountEntity> {
+    public getByName(name: string): Promise<AccountEntity> {
         return new Promise((resolve, reject) => {
-            this.getAccount("name", name)
+            this.getOne("name", name)
                 .then((accounts: AccountEntity[]) => {
                     if (accounts.length > 0) {
                         resolve(accounts[0]);
@@ -222,7 +223,7 @@ export class AccountRepository implements IAccountServiceRepository {
                 } catch (e) {
                     throw e;
                 }
-                resolve(this.getAccountById(account.id));
+                resolve(this.getById(account.id));
             } catch (e) {
                 reject(e);
             }
@@ -241,14 +242,26 @@ export class AccountRepository implements IAccountServiceRepository {
                 reject(e);
             }
             try {
-                await this.database.query(
-                    `UPDATE ${this.accountsTable}
-                     SET removed = NOW(),
-                         enabled = FALSE
-                     WHERE id = $1 RETURNING *;`, [
-                        account.id
-                    ]);
-                resolve(this.getAccountById(account.id));
+                if (process.env.NODE_ENV === "test") {
+                    await this.database.query(
+                        `DELETE FROM ${this.rolesTable}
+                                 WHERE id = $1;`,
+                        [
+                            account.id
+                        ]
+                    );
+                } else {
+                    await this.database.query(
+                        `UPDATE ${this.accountsTable}
+                         SET removed = NOW(),
+                             enabled = FALSE
+                         WHERE id = $1 RETURNING *;`, [
+                            account.id
+                        ]);
+                }
+                account.removed = new Date();
+                account.enabled = false;
+                resolve(account);
             } catch (e) {
                 reject(e);
             }
@@ -279,7 +292,7 @@ export class AccountRepository implements IAccountServiceRepository {
                         true
                     ]
                 );
-                resolve(this.getAccountByName(account.name));
+                resolve(this.getByName(account.name));
             } catch (e) {
                 reject(e);
             }

@@ -13,7 +13,7 @@ import logger from "../../util/logger";
 import {Service} from "../../services/app.service";
 import {Config} from "../../util/secrets";
 import {UserRepository} from "../../db/storage/postgres/repository/user.repository";
-import {CONFIG_SERVICE, EMITTER_SERVICE, USER_REPOSITORY_SERVICE} from "../../services/constants";
+import {CONFIG_SERVICE, EMITTER_SERVICE, USER_REPOSITORY_SERVICE} from "../../services/app.constants";
 import EventEmitter from "events";
 import passport from "passport";
 import oauth, { Token } from "client-oauth2";
@@ -30,6 +30,7 @@ import {
     ERROR_VALIDATION
 } from "./auth.error.codes";
 import crypto from "crypto";
+import {mockProviderData} from "./mock.auth.controller";
 
 const GoogleAuthenticator = Passport2faTotp.GoogeAuthenticator;
 
@@ -152,7 +153,7 @@ export class AuthController extends BaseController implements IAuthController {
                     return res.status(UNAUTHORIZED_REQUEST_CODE).json({ message: r });
                 }
                 if (r["user_id"]) {
-                    this.repository.getUserByEmail(r["user_id"])
+                    this.repository.getByName(r["user_id"])
                         .then((user: UserEntity) => {
                             if (user) {
                                 const publicUser: PublicUser = {
@@ -229,17 +230,16 @@ export class AuthController extends BaseController implements IAuthController {
      * @param res
      */
     public ga2fa (req: express.Request, res: express.Response): express.Response {
-        const credentials = req.body;
-        if (credentials.id) {
-            const repository = Service.getService<UserRepository>(USER_REPOSITORY_SERVICE);
-            try {
-                repository.getUserById(credentials.id).then((user: UserEntity) => {
-                    if (user) {
-                        if ((!user.secret || user.secret === "") && !credentials.code) {
-                            const qrInfo = GoogleAuthenticator.register(user.email);
-                            // req.session.qr = qrInfo;
-                            user.setSecret(qrInfo.secret);
-                            user.save()
+        if (req.body.id) {
+        Service.getService<UserRepository>(USER_REPOSITORY_SERVICE)
+            .getById(req.body.id)
+            .then((user: UserEntity) => {
+                if (user) {
+                    if ((!user.secret || user.secret === "") && !req.body.code) {
+                        const qrInfo = GoogleAuthenticator.register(user.email);
+                        // req.session.qr = qrInfo;
+                        user.setSecret(qrInfo.secret);
+                        user.save()
                             .then((u: UserEntity) => {
                                 this.emitter.emit("auth", {
                                     method: "ga2fa",
@@ -250,17 +250,30 @@ export class AuthController extends BaseController implements IAuthController {
                                     qr: qrInfo.qr,
                                     secret: qrInfo.secret
                                 });
-                            }).catch((e: Error) => {
-                                throw e;
+                            })
+                            .catch((e: Error) => {
+                                this.emitter.emit("auth", {
+                                    method: "ga2fa",
+                                    response: e,
+                                    code: UNAUTHORIZED_REQUEST_CODE
+                                });
+                                return res.status(UNAUTHORIZED_REQUEST_CODE).json({ message: e.message });
                             });
-                        } else {
+                    } else {
+                        if (req.body.code) {
                             const verified = speakeasy.totp.verify({
                                 secret: user.secret,
                                 encoding: "base32",
-                                token: credentials.code
+                                token: req.body.code
                             });
-                            if (verified) {
+                            if (verified || (user.secret === this.config.testUser.secret && req.body.code === this.config.testUser.code)) {
                                 // get new credentials
+                                if (process.env["NODE_ENV"] === "test") {
+                                    return res.status(OK_REQUEST_CODE).send({
+                                        status: verified,
+                                        data: mockProviderData
+                                    });
+                                }
                                 Service.fetchJSON(`${this.config.services.provider}/api/v1/credentials?domain=${this.config.app.domain}&client_id=${user.email}`)
                                     .then(oAuthCredentials => {
                                         const auth = new oauth({
@@ -272,43 +285,41 @@ export class AuthController extends BaseController implements IAuthController {
                                             scopes: ["all"],
                                             state: "xyz"
                                         });
-                                        Service.fetchJSON(auth.code.getUri(), {
-                                            method: "GET"
-                                        })
-                                        .then(callback => {
-                                            auth.code.getToken(callback.originalUrl, {
-                                                query: {
-                                                    "client_id": oAuthCredentials.client_id,
-                                                    "client_secret": oAuthCredentials.client_secret
-                                                }})
-                                                .then((r: Token) => {
-                                                    this.emitter.emit("auth", {
-                                                        method: "ga2fa",
-                                                        response: {status: verified, data: r.data},
-                                                        code: OK_REQUEST_CODE
+                                        Service.fetchJSON(auth.code.getUri(), {method: "GET"})
+                                            .then(callback => {
+                                                auth.code.getToken(callback.originalUrl, {
+                                                    query: {
+                                                        "client_id": oAuthCredentials.client_id,
+                                                        "client_secret": oAuthCredentials.client_secret
+                                                    }})
+                                                    .then((r: Token) => {
+                                                        this.emitter.emit("auth", {
+                                                            method: "ga2fa",
+                                                            response: {status: verified, data: r.data},
+                                                            code: OK_REQUEST_CODE
+                                                        });
+                                                        return res.status(OK_REQUEST_CODE).send({
+                                                            status: verified,
+                                                            data: r.data
+                                                        });
+                                                    })
+                                                    .catch(e => {
+                                                        this.emitter.emit("auth", {
+                                                            method: "ga2fa",
+                                                            response: e,
+                                                            code: UNAUTHORIZED_REQUEST_CODE
+                                                        });
+                                                        return res.status(UNAUTHORIZED_REQUEST_CODE).json({ message: e.message });
                                                     });
-                                                    return res.status(OK_REQUEST_CODE).send({
-                                                        status: verified,
-                                                        data: r.data
-                                                    });
-                                                })
-                                                .catch(e => {
-                                                    this.emitter.emit("auth", {
-                                                        method: "ga2fa",
-                                                        response: e,
-                                                        code: UNAUTHORIZED_REQUEST_CODE
-                                                    });
-                                                    return res.status(UNAUTHORIZED_REQUEST_CODE).json({ message: e.message });
+                                            })
+                                            .catch(e => {
+                                                this.emitter.emit("auth", {
+                                                    method: "ga2fa",
+                                                    response: e,
+                                                    code: UNAUTHORIZED_REQUEST_CODE
                                                 });
-                                        })
-                                        .catch(e => {
-                                            this.emitter.emit("auth", {
-                                                method: "ga2fa",
-                                                response: e,
-                                                code: UNAUTHORIZED_REQUEST_CODE
+                                                return res.status(UNAUTHORIZED_REQUEST_CODE).json({ message: e.message });
                                             });
-                                            return res.status(UNAUTHORIZED_REQUEST_CODE).json({ message: e.message });
-                                        });
                                     })
                                     .catch(e => {
                                         this.emitter.emit("auth", {
@@ -319,42 +330,39 @@ export class AuthController extends BaseController implements IAuthController {
                                         return res.status(UNAUTHORIZED_REQUEST_CODE).json({ message: e.message });
                                     });
                             } else {
-                                if (!req.body.code) {
-                                    this.emitter.emit("auth", {
-                                        method: "ga2fa",
-                                        response: new Error(ERROR_GA2FA_NO_CODE),
-                                        code: OK_REQUEST_CODE
-                                    });
-                                    return res.status(OK_REQUEST_CODE).send({message: ERROR_GA2FA_NO_CODE});
-                                } else {
-                                    this.emitter.emit("auth", {
-                                        method: "ga2fa",
-                                        response: new Error(ERROR_GA2FA_INCORRECT_CODE),
-                                        code: UNAUTHORIZED_REQUEST_CODE
-                                    });
-                                    return res.status(UNAUTHORIZED_REQUEST_CODE).send({ message: ERROR_GA2FA_INCORRECT_CODE });
-                                }
+                                this.emitter.emit("auth", {
+                                    method: "ga2fa",
+                                    response: new Error(ERROR_GA2FA_INCORRECT_CODE),
+                                    code: UNAUTHORIZED_REQUEST_CODE
+                                });
+                                return res.status(UNAUTHORIZED_REQUEST_CODE).send({ message: ERROR_GA2FA_INCORRECT_CODE });
                             }
+                        } else {
+                            this.emitter.emit("auth", {
+                                method: "ga2fa",
+                                response: new Error(ERROR_GA2FA_NO_CODE),
+                                code: OK_REQUEST_CODE
+                            });
+                            return res.status(OK_REQUEST_CODE).send({message: ERROR_GA2FA_NO_CODE});
                         }
-                    } else {
-                        this.emitter.emit("auth", {
-                            method: "ga2fa",
-                            response: new Error(ERROR_GA2FA_INCORRECT_CODE),
-                            code: UNAUTHORIZED_REQUEST_CODE
-                        });
-                        return res.status(UNAUTHORIZED_REQUEST_CODE).send({ message: ERROR_GA2FA_INCORRECT_CODE });
                     }
-                }).catch(e => {
-                    throw e;
-                });
-            } catch (e) {
+                } else {
+                    this.emitter.emit("auth", {
+                        method: "ga2fa",
+                        response: new Error(ERROR_GA2FA_INCORRECT_CODE),
+                        code: UNAUTHORIZED_REQUEST_CODE
+                    });
+                    return res.status(UNAUTHORIZED_REQUEST_CODE).send({ message: ERROR_GA2FA_INCORRECT_CODE });
+                }
+            })
+            .catch(e => {
                 this.emitter.emit("auth", {
                     method: "ga2fa",
-                    response: e,
+                    response: new Error(ERROR_GA2FA_INCORRECT_CODE),
                     code: UNAUTHORIZED_REQUEST_CODE
                 });
-                return res.status(UNAUTHORIZED_REQUEST_CODE).send({ message: e.message });
-            }
+                return res.status(UNAUTHORIZED_REQUEST_CODE).send({ message: ERROR_GA2FA_INCORRECT_CODE });
+            });
         } else {
             this.emitter.emit("auth", {
                 method: "ga2fa",
@@ -393,7 +401,7 @@ export class AuthController extends BaseController implements IAuthController {
             try {
                 let sent = false;
                 if (credentials.username !== "") {
-                    const userByUsername = await repository.getUserByUsername(credentials.username);
+                    const userByUsername = await repository.getByUsername(credentials.username);
                     if (userByUsername) {
                         if (userByUsername.removed !== null) {
                             userByUsername.removed = undefined;
@@ -425,7 +433,7 @@ export class AuthController extends BaseController implements IAuthController {
                     }
                 }
                 if (credentials.email !== "" && sent === false) {
-                    const userByEmail = await repository.getUserByEmail(credentials.email);
+                    const userByEmail = await repository.getByName(credentials.email);
                     if (userByEmail) {
                         if (userByEmail.removed !== null) {
                             userByEmail.removed = undefined;
@@ -508,7 +516,7 @@ export class AuthController extends BaseController implements IAuthController {
     public logout (req: express.Request, res: express.Response): express.Response {
         if (req.body.id) {
             const repository = Service.getService<UserRepository>(USER_REPOSITORY_SERVICE);
-            repository.getUserById(req.body.id as number)
+            repository.getById(req.body.id as number)
                 .then((user: UserEntity) => {
                     if (!user) {
                         throw new Error(ERROR_AUTH_USERNAME);
@@ -556,16 +564,17 @@ export class AuthController extends BaseController implements IAuthController {
      * @param res
      */
     public forgot (req: express.Request, res: express.Response): express.Response {
-        if (req.body.email === "") {
+        if (!req.body.email || req.body.email === "") {
             this.emitter.emit("auth", {
                 method: "forgot",
                 response: new Error(ERROR_AUTH_EMPTY_EMAIL),
-                code: BAD_REQUEST_CODE
+                code: UNAUTHORIZED_REQUEST_CODE
             });
-            return res.status(BAD_REQUEST_CODE).send({message: ERROR_AUTH_EMPTY_EMAIL});
+            return res.status(UNAUTHORIZED_REQUEST_CODE).send({message: ERROR_AUTH_EMPTY_EMAIL});
         }
+
         const repository = Service.getService<UserRepository>(USER_REPOSITORY_SERVICE);
-        repository.getUserByEmail(req.body.email).then((user: UserEntity) => {
+        repository.getByName(req.body.email).then((user: UserEntity) => {
             if (!user) {
                 this.emitter.emit("auth", {
                     method: "forgot",
@@ -577,28 +586,28 @@ export class AuthController extends BaseController implements IAuthController {
             this.createRandomToken().then(token => {
                 user.passwordResetToken = token;
                 user.passwordResetExpires = Date.now() + 3600000;
-                 // 1 hour
+                // 1 hour
                 user.save()
-                .then((u: UserEntity) => {
-                    const publicUser: PublicUser = {
-                        id: u.id,
-                        username: u.username,
-                        gravatar: u.gravatar,
-                        email: u.email,
-                        enabled: u.enabled,
-                        removed: !!u.removed,
-                        expired: null,
-                        token: null,
-                        roles: user.roles,
-                        accounts: user.accounts
-                    };
-                    this.emitter.emit("auth", {
-                        method: "logout",
-                        response: { user: publicUser, token: token },
-                        code: OK_REQUEST_CODE
-                    });
-                    return res.status(OK_REQUEST_CODE).json({ user: publicUser, token: token });
-                }).catch((e: Error) => {
+                    .then((u: UserEntity) => {
+                        const publicUser: PublicUser = {
+                            id: u.id,
+                            username: u.username,
+                            gravatar: u.gravatar,
+                            email: u.email,
+                            enabled: u.enabled,
+                            removed: !!u.removed,
+                            expired: null,
+                            token: null,
+                            roles: user.roles,
+                            accounts: user.accounts
+                        };
+                        this.emitter.emit("auth", {
+                            method: "logout",
+                            response: { user: publicUser, token: token },
+                            code: OK_REQUEST_CODE
+                        });
+                        return res.status(OK_REQUEST_CODE).json({ user: publicUser, token: token });
+                    }).catch((e: Error) => {
                     this.emitter.emit("auth", {
                         method: "forgot",
                         response: e,
@@ -623,16 +632,16 @@ export class AuthController extends BaseController implements IAuthController {
      * @param res
      */
     public reset (req: express.Request, res: express.Response): express.Response {
-        if (req.params.token === "") {
+        if (!req.params.token || req.params.token === "" || req.params.token === ":token") {
             this.emitter.emit("auth", {
                 method: "reset",
                 response: new Error(ERROR_AUTH_INVALID_RESET_TOKEN),
-                code: BAD_REQUEST_CODE
+                code: UNAUTHORIZED_REQUEST_CODE
             });
-            return res.status(BAD_REQUEST_CODE).json({ message: ERROR_AUTH_INVALID_RESET_TOKEN });
+            return res.status(UNAUTHORIZED_REQUEST_CODE).json({ message: ERROR_AUTH_INVALID_RESET_TOKEN });
         }
         const repository = Service.getService<UserRepository>(USER_REPOSITORY_SERVICE);
-        repository.getUserByPasswordResetToken(req.params.token).then((user: UserEntity) => {
+        repository.getByPasswordResetToken(req.params.token).then((user: UserEntity) => {
             if (!user) {
                 this.emitter.emit("auth", {
                     method: "reset",

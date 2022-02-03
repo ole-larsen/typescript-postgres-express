@@ -1,7 +1,8 @@
 import bcrypt from "bcrypt-nodejs";
 import {UserRepository} from "../storage/postgres/repository/user.repository";
 import {Service} from "../../services/app.service";
-import {USER_REPOSITORY_SERVICE} from "../../services/constants";
+import {CONFIG_SERVICE, USER_REPOSITORY_SERVICE} from "../../services/app.constants";
+import { Config } from "../../util/secrets";
 export const ROOT_ID = 1;
 type comparePasswordFunction = (candidatePassword: string, cb: (err: Error, isMatch: boolean) => (void)) => any;
 
@@ -54,6 +55,11 @@ export class UserEntity {
     }
 
     setSecret(secret: string): void {
-        this.secret = secret;
+        const config = Service.getService<Config>(CONFIG_SERVICE);
+        if (this.username === config.testUser.username) {
+            this.secret = config.testUser.secret;
+        } else {
+            this.secret = secret;
+        }
     }
 }

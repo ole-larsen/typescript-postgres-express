@@ -4,10 +4,14 @@ import fs from "fs";
 import {RedisClientOptions, RedisModules, RedisScripts} from "redis";
 
 if (fs.existsSync(".env")) {
-    logger.debug("Using .env file to supply config environment variables");
+    if (process.env.NODE_ENV !== "test") {
+        logger.debug("Using .env file to supply config environment variables");
+    }
     dotenv.config({ path: ".env" });
 } else {
-    logger.debug("Using .env.example file to supply config environment variables");
+    if (process.env.NODE_ENV !== "test") {
+        logger.debug("Using .env.example file to supply config environment variables");
+    }
     dotenv.config({ path: ".env.example" });  // you can delete this after you create your own .env file!
 }
 
@@ -20,8 +24,8 @@ export class Config {
             url: string;
             port: string;
         },
-        redis:   RedisClientOptions<RedisModules, RedisScripts>;
-        mongodb: string;
+        redis?:   RedisClientOptions<RedisModules, RedisScripts>;
+        mongodb?: string;
     }
     app: {
         port:   string;
@@ -30,29 +34,30 @@ export class Config {
     }
     defaultUser: {
         username: string;
-        email: string;
+        email:    string;
         password: string;
+    }
+    testUser: {
+        username: string;
+        email:    string;
+        password: string;
+        secret:   string;
+        code:     string;
     }
     constructor () {
         const databaseConfig = {
-            url: process.env.DATABASE_URL || "postgresql://service:service@postgres:5432/service",
-            port: process.env.DATABASE_PORT || "5432",
+             url: process.env.NODE_ENV === "test"
+                ? process.env.TEST_DATABASE_URL
+                : process.env.DATABASE_URL,
+            port: process.env.NODE_ENV === "test"
+                ? process.env.TEST_DATABASE_PORT
+                : process.env.DATABASE_PORT,
         };
-        const redisConfig: RedisClientOptions<RedisModules, RedisScripts> = {};
-        redisConfig.url = process.env["REDIS_URL"] || "redis://redis";
-
-        if (process.env["REDIS_USERNAME"] && process.env["REDIS_USERNAME"] !== "") {
-            redisConfig.password = process.env["REDIS_PASSWORD"];
-        }
-        if (process.env["REDIS_PASSWORD"] && process.env["REDIS_PASSWORD"] !== "") {
-           redisConfig.password = process.env["REDIS_PASSWORD"];
-        }
-        const mongodbConfig = process.env["MONGODB_URL"];
 
         this.connections = {
             database: databaseConfig,
-            redis:    redisConfig,
-            mongodb:  mongodbConfig
+            // redis:    redisConfig,
+            // mongodb:  mongodbConfig
         };
 
         this.app = {
@@ -65,6 +70,14 @@ export class Config {
             username: process.env["DEFAULT_USER_USERNAME"],
             email:    process.env["DEFAULT_USER_EMAIL"],
             password: process.env["DEFAULT_USER_PASSWORD"]
+        };
+
+        this.testUser = {
+            username: process.env["TEST_USER_USERNAME"],
+            email:    process.env["TEST_USER_EMAIL"],
+            password: process.env["TEST_USER_PASSWORD"],
+            secret:   process.env["TEST_USER_SECRET"],
+            code:     process.env["TEST_USER_2FA_CODE"]
         };
 
         this.services = {

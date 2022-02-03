@@ -8,7 +8,7 @@ import {
 } from "../base.controller";
 import EventEmitter from "events";
 import {Service} from "../../services/app.service";
-import {CONFIG_SERVICE, EMITTER_SERVICE, USER_REPOSITORY_SERVICE} from "../../services/constants";
+import {CONFIG_SERVICE, EMITTER_SERVICE, USER_REPOSITORY_SERVICE} from "../../services/app.constants";
 import {UserRepository} from "../../db/storage/postgres/repository/user.repository";
 import {PublicUser, UserEntity} from "../../db/entities/users.entity";
 import {Config} from "../../util/secrets";
@@ -85,46 +85,37 @@ export class UserController extends BaseController implements ICRUDController {
      * @param res
      */
     public get (req: express.Request, res: express.Response): express.Response {
-        // need this try catch to have correct express.Response in function return type. It should return something
         try {
-            this.repository.getUsers()
-                .then((users: UserEntity[]) => {
-                    if (users.length === 0) {
-                        this.emitter.emit("config", `${users.length} users found. creating ${this.config.defaultUser.username}`);
-                        this.createFirstUser()
-                            .then((user: UserEntity) => {
-                                this.emitter.emit("user", {
-                                    method: "get",
-                                    response: {user: user},
-                                    code: OK_REQUEST_CODE
-                                });
-                                return res.status(OK_REQUEST_CODE).json([user]);
-                            })
-                            .catch(e => {
-                                this.emitter.emit("user", {
-                                    method: "get",
-                                    response: e,
-                                    code: BAD_REQUEST_CODE
-                                });
-                                return res.status(BAD_REQUEST_CODE).json({message: e.message});
+            (async() => {
+                const users = await this.repository.get();
+                if (users.length === 0) {
+                    this.emitter.emit("config", `${users.length} users found. creating ${this.config.defaultUser.username}`);
+                    this.createFirstUser()
+                        .then((user: UserEntity) => {
+                            this.emitter.emit("user", {
+                                method: "get",
+                                response: {user: user},
+                                code: OK_REQUEST_CODE
                             });
-                    } else {
-                        this.emitter.emit("user", {
-                            method: "get",
-                            response: {users: users.filter((user: UserEntity) => user.removed === null || user.removed === undefined)},
-                            code: OK_REQUEST_CODE
+                            return res.status(OK_REQUEST_CODE).json([user]);
+                        })
+                        .catch(e => {
+                            this.emitter.emit("user", {
+                                method: "get",
+                                response: e,
+                                code: BAD_REQUEST_CODE
+                            });
+                            return res.status(BAD_REQUEST_CODE).json({message: e.message});
                         });
-                        return res.status(OK_REQUEST_CODE).json(users.filter((user: UserEntity) => user.removed === null || user.removed === undefined));
-                    }
-                })
-                .catch(e => {
+                } else {
                     this.emitter.emit("user", {
                         method: "get",
-                        response: e,
-                        code: BAD_REQUEST_CODE
+                        response: {users: users.filter((user: UserEntity) => user.removed === null || user.removed === undefined)},
+                        code: OK_REQUEST_CODE
                     });
-                    return res.status(BAD_REQUEST_CODE).json({message: e.message});
-                });
+                    return res.status(OK_REQUEST_CODE).json(users.filter((user: UserEntity) => user.removed === null || user.removed === undefined));
+                }
+            })();
         } catch (e) {
             this.emitter.emit("user", {
                 method: "get",
@@ -145,7 +136,7 @@ export class UserController extends BaseController implements ICRUDController {
             });
             return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
         }
-        this.repository.getUserById(id)
+        this.repository.getById(id)
             .then((user: UserEntity) => {
                 if (user) {
                     this.emitter.emit("user", {
@@ -175,12 +166,12 @@ export class UserController extends BaseController implements ICRUDController {
         if (!req.body.id) {
             this.emitter.emit("user", {
                 method: "update",
-                response: new Error("invalid parameters"),
+                response: "invalid parameters",
                 code: BAD_REQUEST_CODE
             });
             return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
         }
-        this.repository.getUserById(req.body.id)
+        this.repository.getById(req.body.id)
             .then((user: UserEntity) => {
                 if (user) {
                     // change user status
@@ -272,12 +263,12 @@ export class UserController extends BaseController implements ICRUDController {
         if (!req.body.id) {
             this.emitter.emit("user", {
                 method: "delete",
-                response: new Error("invalid parameters"),
+                response: "invalid parameters",
                 code: BAD_REQUEST_CODE
             });
             return res.status(BAD_REQUEST_CODE).json({message: "invalid parameters"});
         }
-        this.repository.getUserById(req.body.id)
+        this.repository.getById(req.body.id)
             .then(async (user: UserEntity) => {
                 if (user) {
                     try {

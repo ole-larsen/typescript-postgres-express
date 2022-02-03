@@ -9,22 +9,16 @@ import { EventEmitter } from "events";
 import fetch from "node-fetch";
 import {Config} from "../util/secrets";
 import {PostgresFactory} from "../db/storage/postgres/postgres.factory";
-// import {RedisFactory}    from "../db/storage/redis.factory";
-// import {MongodbFactory}  from "../db/storage/mongodb.factory";
+
 import {
-    LOGGER_SERVICE,
     CONFIG_SERVICE,
-    // MONGODB_SERVICE,
     POSTGRES_SERVICE,
-    // REDIS_PUB_SERVICE,
-    // REDIS_SERVICE,
-    // REDIS_SUB_SERVICE,
     APP_SERVICE,
     PROMETHEUS_SERVICE,
     EMITTER_SERVICE,
     ROLE_REPOSITORY_SERVICE,
-    USER_REPOSITORY_SERVICE, ACCOUNT_REPOSITORY_SERVICE
-} from "./constants";
+    USER_REPOSITORY_SERVICE, ACCOUNT_REPOSITORY_SERVICE, SERVER_SERVICE
+} from "./app.constants";
 import {Pool} from "pg";
 import {RedisClientType, RedisModules, RedisScripts} from "redis";
 import {Mongoose} from "mongoose";
@@ -63,7 +57,7 @@ passport.serializeUser(function(user: UserEntity, done) {
 passport.deserializeUser(async function(id, done){
     const repository = Service.getService<UserRepository>(USER_REPOSITORY_SERVICE);
     try {
-        const user = await repository.getUserById(id as number);
+        const user = await repository.getById(id as number);
         done(null, user);
     } catch (e) {
         done(e, null);
@@ -78,7 +72,7 @@ passport.use(new LocalStrategy(
     }, async (email: string, password: string, done: any) => {
         const repository = Service.getService<UserRepository>(USER_REPOSITORY_SERVICE);
         try {
-            const user = await repository.getUserByEmail(email);
+            const user = await repository.getByName(email);
             if (user) {
                 user.comparePassword(password, (err: Error, isMatch: boolean) => {
                     if (err) { return done(err); }
@@ -107,6 +101,12 @@ export class Service {
             IRoleServiceRepository | IUserServiceRepository | IAccountServiceRepository |
             Promise<any> | any;
     };
+
+    /**
+     * fetch wrapper
+     * @param url
+     * @param parameters
+     */
     static fetchJSON (url: string, parameters: any = {}): Promise<any> {
         return new Promise(async (resolve, reject) => {
             try {
@@ -127,6 +127,7 @@ export class Service {
             }
         });
     }
+
     /**
      * generate password with bcrypt
      * @param password
@@ -148,65 +149,92 @@ export class Service {
 
         });
     }
-    constructor() {
-        (async () => {
-            try {
-            } catch (e) {
-                throw e;
-            }
-        })();
+
+    /**
+     * Add services instance to container as singleton.
+     *
+     * @param name
+     * @param service
+     */
+    static addService<T extends Config | Pool | RedisClientType<RedisModules, RedisScripts> | Mongoose | core.Express |
+        Prometheus | EventEmitter | IRoleServiceRepository | IUserServiceRepository | IAccountServiceRepository |
+        Promise<any>>(name: string, service: T): void {
+        if (!Service.service) {
+            Service.service = {};
+        }
+        Service.service[name] = service;
     }
 
-    bootstrap() {
+    /**
+     * Get services instance from container.
+     *
+     * @param name
+     */
+    static getService<T>(name: string): T {
+        return Service.service[name];
+    }
+
+    bootstrap(): Service {
         this.diSetup()
             .setup()
             .router()
             .swagger()
             .prometheus()
             .serve();
+        return this;
+    }
+    log(): Service {
+        const emitter = Service.getService<EventEmitter>(EMITTER_SERVICE);
+        if (emitter) {
+            emitter.on("defaultMiddleware", (provider) => {
+                const request: express.Request = provider.request;
+                const response: express.Response = provider.response;
+                const getActualRequestDurationInMilliseconds = (start: [number, number]) => {
+                    const NS_PER_SEC = 1e9; // convert to nanoseconds
+                    const NS_TO_MS = 1e6; // convert to milliseconds
+                    const diff = process.hrtime(start);
+                    return (diff[0] * NS_PER_SEC + diff[1]) / NS_TO_MS;
+                };
+                const start = process.hrtime();
+                const durationInMilliseconds = getActualRequestDurationInMilliseconds(start);
+                const { httpVersion, method, socket, url } = request;
+                const { remoteAddress } = socket;
+
+                const { statusCode } = response;
+                const log = `[Http:${httpVersion} address: ${remoteAddress} ${method}:${url} ${statusCode} ${durationInMilliseconds.toLocaleString()} ms`;
+                logger.info(log);
+            });
+        }
+        return this;
     }
     diSetup(): Service {
-        const config     = new Config();
-        const app        = express();
-        const prometheus = new Prometheus();
-        const pool       = PostgresFactory.createPoolFromEnv(config.connections.database.url);
-        // const redis      = RedisFactory.createClientFromEnv(config.connections.redis);
-        // const redisSub   = RedisFactory.duplicate(redis);
-        // const redisPub   = RedisFactory.duplicate(redis);
-        // const mongodb    = MongodbFactory.createConnectionFromEnv(config.connections.mongodb);
-        const emitter    = new EventEmitter();
-        Service.addService(LOGGER_SERVICE, logger);
+        const config = new Config();
         Service.addService(CONFIG_SERVICE, config);
+
+        const app = express();
         Service.addService(APP_SERVICE, app);
-        Service.addService(PROMETHEUS_SERVICE, prometheus);
+
+        const pool = PostgresFactory.createPoolFromEnv(config.connections.database.url);
         Service.addService(POSTGRES_SERVICE, pool);
-        // Service.addService(REDIS_SERVICE, redis);
-        // Service.addService(REDIS_SUB_SERVICE, redisSub);
-        // Service.addService(REDIS_PUB_SERVICE, redisPub);
-        // Service.addService(MONGODB_SERVICE, mongodb);
+
+        const prometheus = new Prometheus();
+        Service.addService(PROMETHEUS_SERVICE, prometheus);
+
+        const emitter = new EventEmitter();
         Service.addService(EMITTER_SERVICE, emitter);
+
         Service.addService(ROLE_REPOSITORY_SERVICE, new RoleRepository());
         Service.addService(USER_REPOSITORY_SERVICE, new UserRepository());
         Service.addService(ACCOUNT_REPOSITORY_SERVICE, new AccountRepository());
-        // (async () => {
-        //     try {
-        //         await Promise.all([
-        //             redis.connect(),
-        //             redisPub.connect(),
-        //             redisSub.connect(),
-        //             // mongodb.connect
-        //         ]);
-        //     } catch(e) {
-        //         return e;
-        //     }
-        // })().catch(e => emitter.emit("error", e));
-        // emitter.emit("start", this);
+
         return this;
     }
     setup(): Service {
         const config = Service.getService<Config>(CONFIG_SERVICE);
         const app    = Service.getService<core.Express>(APP_SERVICE);
-        logger.info(`configure express server on port ${config.app.port}`);
+        if (process.env.NODE_ENV !== "test") {
+            logger.info(`configure express server on port ${config.app.port}`);
+        }
         app.set("port", config.app.port);
         app.use(cookieParser(config.app.secret));
         app.use(compression());
@@ -215,7 +243,11 @@ export class Service {
         const cookieExpirationDate = new Date();
         const cookieExpirationDays = 365;
         cookieExpirationDate.setDate(cookieExpirationDate.getDate() + cookieExpirationDays);
-        app.use(session());
+        app.use(session({
+            secret: config.app.secret,
+            resave: true,
+            saveUninitialized: true
+        }));
         app.use(passport.initialize());
         app.use(passport.session());
         app.set("trust proxy", 1);
@@ -246,7 +278,9 @@ export class Service {
     }
     router(): Service {
         const app = Service.getService<core.Express>(APP_SERVICE);
-        logger.info("configure express server routes");
+        if (process.env.NODE_ENV !== "test") {
+            logger.info("configure express server routes");
+        }
         app.use("/api/v1",         apiRoutes());
         app.use("/api/v1/auth",    authRoutes());
         app.use("/api/v1/role",    roleRoutes());
@@ -257,7 +291,9 @@ export class Service {
     swagger(): Service {
         const config = Service.getService<Config>(CONFIG_SERVICE);
         const app    = Service.getService<core.Express>(APP_SERVICE);
-        logger.info("configure express server swagger");
+        if (process.env.NODE_ENV !== "test") {
+            logger.info("configure express server swagger");
+        }
         const swaggerDocs = swaggerJSDoc(getSwaggerOptions(config));
         app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
         return this;
@@ -265,20 +301,25 @@ export class Service {
     prometheus(): Service {
         const app = Service.getService<core.Express>(APP_SERVICE);
         const prometheus = Service.getService<Prometheus>(PROMETHEUS_SERVICE);
-        logger.info("configure express server metrics");
+        if (process.env.NODE_ENV !== "test") {
+            logger.info("configure express server metrics");
+        }
         prometheus.injectMetricsRoute(app);
         prometheus.startCollection();
         return this;
     }
     serve(): Service {
         const app = Service.getService<core.Express>(APP_SERVICE);
-        logger.info(`starting express server on port ${app.get("port")}`);
+        if (process.env.NODE_ENV !== "test") {
+            logger.info(`starting express server on port ${app.get("port")}`);
+        }
         /**
          * Start Express server.
          */
-        app.listen(app.get("port"), () => {
+        const server = app.listen(app.get("port"), () => {
             logger.info(`app is running http://localhost:${app.get("port")} in ${app.get("env")} mode`);
         });
+        Service.addService(SERVER_SERVICE, server);
         return this;
     }
 
@@ -297,28 +338,4 @@ export class Service {
     //     this.wss = wss;
     //     return this;
     // }
-
-    /**
-     * Add services instance to container as singleton.
-     *
-     * @param name
-     * @param service
-     */
-    public static addService<T extends Config | Pool | RedisClientType<RedisModules, RedisScripts> | Mongoose | core.Express |
-        Prometheus | EventEmitter | IRoleServiceRepository | IUserServiceRepository | IAccountServiceRepository |
-        Promise<any>>(name: string, service: T): void {
-        if (!Service.service) {
-            Service.service = {};
-        }
-        Service.service[name] = service;
-    }
-
-    /**
-     * Get services instance from container.
-     *
-     * @param name
-     */
-    public static getService<T>(name: string): T {
-        return Service.service[name];
-    }
 }

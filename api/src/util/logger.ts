@@ -16,13 +16,13 @@ const options: winston.LoggerOptions = {
                 winston.format.colorize({ all: true })
             )
         }),
-        new winston.transports.File({ filename: "debug.log", level: "debug" })
+        //new winston.transports.File({ filename: "debug.log", level: "debug" })
     ]
 };
 
 const logger = winston.createLogger(options);
 
-if (process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
     logger.debug("Logging initialized at debug level");
 }
 

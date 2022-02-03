@@ -17,7 +17,9 @@ export class Prometheus {
      * This function will start the collection of metrics and should be called from within in the main js file
      */
     startCollection = function () {
-        logger.info("starting the collection of metrics, the metrics are available on /metrics");
+        if (process.env.NODE_ENV !== "test") {
+            logger.info("starting the collection of metrics, the metrics are available on /metrics");
+        }
         const collectDefaultMetrics = client.collectDefaultMetrics;
         // const gcDurationBuckets = [0.1, 0.2, 0.3];
         // collectDefaultMetrics({ gcDurationBuckets });

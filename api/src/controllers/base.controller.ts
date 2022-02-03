@@ -6,45 +6,47 @@ export abstract class BaseController {
     abstract get    (req: express.Request, res: express.Response): express.Response;
 
     compileLogger (message: any, entity: string, entities: string): void {
-        switch (message.code) {
-            case OK_REQUEST_CODE:
-                if (message.response) {
-                    if (message.response[entity]) {
-                        logger.info(`${entity}.${message.method}:${message.code} ${message.response[entity].name}`);
-                    } else if (message.response[entities]) {
-                        logger.info(`${entity}.${message.method}:${message.code} loaded ${message.response[entities].length} ${entities}`);
+        if (process.env["NODE_ENV"] !== "test") {
+            switch (message.code) {
+                case OK_REQUEST_CODE:
+                    if (message.response) {
+                        if (message.response[entity]) {
+                            logger.info(`${entity}.${message.method}:${message.code} ${message.response[entity].name}`);
+                        } else if (message.response[entities]) {
+                            logger.info(`${entity}.${message.method}:${message.code} loaded ${message.response[entities].length} ${entities}`);
+                        } else {
+                            logger.info(`${entity}.${message.method}:${message.code} ${message.response}`);
+                        }
                     } else {
-                        logger.info(`${entity}.${message.method}:${message.code} ${message.response}`);
+                        logger.info(`${entity}.${message.method}:${message.code} ${message}`);
                     }
-                } else {
-                    logger.info(`${entity}.${message.method}:${message.code} ${message}`);
-                }
-                break;
-            case UNAUTHORIZED_REQUEST_CODE:
-                if (message.response) {
-                    if (message.response.message) {
-                        logger.error(`${entity}.${message.method}:${message.code} ${message.response.message}`);
+                    break;
+                case UNAUTHORIZED_REQUEST_CODE:
+                    if (message.response) {
+                        if (message.response.message) {
+                            logger.error(`${entity}.${message.method}:${message.code} ${message.response.message}`);
+                        } else {
+                            logger.error(`${entity}.${message.method}:${message.code} ${message.response}`);
+                        }
                     } else {
-                        logger.error(`${entity}.${message.method}:${message.code} ${message.response}`);
+                        logger.error(`${entity}.${message.method}:${message.code} ${message}`);
                     }
-                } else {
-                    logger.error(`${entity}.${message.method}:${message.code} ${message}`);
-                }
-                break;
-            case BAD_REQUEST_CODE:
-                if (message.response) {
-                    if (message.response.message) {
-                        logger.error(`${entity}.${message.method}:${message.code} ${message.response.message} ${message.response.stack}`);
+                    break;
+                case BAD_REQUEST_CODE:
+                    if (message.response) {
+                        if (message.response.message) {
+                            logger.error(`${entity}.${message.method}:${message.code} ${message.response.message} ${message.response.stack}`);
+                        } else {
+                            logger.error(`${entity}.${message.method}:${message.code} ${message.response}`);
+                        }
                     } else {
-                        logger.error(`${entity}.${message.method}:${message.code} ${message.response}`);
+                        logger.error(`${entity}.${message.method}:${message.code} ${message}`);
                     }
-                } else {
-                    logger.error(`${entity}.${message.method}:${message.code} ${message}`);
-                }
-                break;
-            default:
-                console.log(message.code, message.method);
-                break;
+                    break;
+                default:
+                    console.log(message);
+                    break;
+            }
         }
     }
 }

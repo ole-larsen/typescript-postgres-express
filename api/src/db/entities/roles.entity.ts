@@ -1,5 +1,5 @@
 import {Service} from "../../services/app.service";
-import {ROLE_REPOSITORY_SERVICE} from "../../services/constants";
+import {ROLE_REPOSITORY_SERVICE} from "../../services/app.constants";
 import {RoleRepository} from "../storage/postgres/repository/role.repository";
 
 export const SUPERADMIN_ROLE_ID = 1;
