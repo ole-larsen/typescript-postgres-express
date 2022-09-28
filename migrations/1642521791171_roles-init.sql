@@ -8,10 +8,10 @@ CREATE TABLE IF NOT EXISTS roles (
     updated    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     removed    TIMESTAMP WITH TIME ZONE DEFAULT NULL
 );
-INSERT INTO roles (title, description, enabled) VALUES ( 'superadmin', 'main system role', true) ON CONFLICT (title) DO NOTHING;
-INSERT INTO roles (title, description, enabled) VALUES ( 'admin',      'admin system role', true) ON CONFLICT (title) DO NOTHING;
-INSERT INTO roles (title, description, enabled) VALUES ( 'user',       'default user role', true) ON CONFLICT (title) DO NOTHING;
-INSERT INTO roles (title, description, enabled) VALUES ( 'manager',    'default manager role', true) ON CONFLICT (title) DO NOTHING;
+INSERT INTO roles (title, description, enabled) VALUES ( 'superadmin', 'main system response', true) ON CONFLICT (title) DO NOTHING;
+INSERT INTO roles (title, description, enabled) VALUES ( 'admin',      'admin system response', true) ON CONFLICT (title) DO NOTHING;
+INSERT INTO roles (title, description, enabled) VALUES ( 'response',       'default response response', true) ON CONFLICT (title) DO NOTHING;
+INSERT INTO roles (title, description, enabled) VALUES ( 'manager',    'default manager response', true) ON CONFLICT (title) DO NOTHING;
 
 -- Down Migration
 DROP TABLE IF EXISTS roles;

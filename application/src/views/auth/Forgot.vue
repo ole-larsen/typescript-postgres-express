@@ -47,7 +47,7 @@
 </template>
 <script>
 import authMixin from '@/mixins/auth'
-import {USER_FORGOT} from "../../store/actions/auth";
+import {AUTH_FORGOT} from "../../store/actions/auth";
 
 export default {
   name: 'Forgot',
@@ -76,15 +76,14 @@ export default {
       this.apiError.message = ''
       this.apiNote.message = ''
       if (this.validate()) {
-        this.$store.dispatch(USER_FORGOT, {user: this.user, url: this.url})
-            .then(r => {
-              if (r && r.message) {
-                this.apiError.message = r.message
+        this.$store.dispatch(AUTH_FORGOT, {user: this.user, url: this.url})
+            .then(response => {
+              if (response && response.message) {
+                this.apiError.message = response.message
               }
-              if (r && r.token) {
+              if (response.user && response.token) {
                 // TODO add handler
-                this.apiNote.message = r.token
-                console.log(r.token)
+                this.apiNote.message = response.token
               }
             })
             .catch(e => {

@@ -12,6 +12,7 @@
           :fields="tableFields"
           head-color="light"
           no-sorting
+          selectable
       >
 
         <td slot="enabled" slot-scope="{item}">
@@ -33,7 +34,7 @@
         <td slot="roles" slot-scope="{item}" class="edit-relation">
           <CButtonGroup>
             <template v-for="(role) in item.roles">
-              <CButton color="info" size="sm" @click.stop.prevent="editRole(role)" v-bind:key="role.value">
+              <CButton color="info" size="sm" @click.stop.prevent="editRole(role)">
                 {{role.label}}
               </CButton>
             </template>
@@ -43,7 +44,7 @@
         <td slot="accounts" slot-scope="{item}" class="edit-relation">
           <CButtonGroup>
             <template v-for="(account) in item.accounts">
-              <CButton color="info" size="sm" @click.stop.prevent="editAccount(account)" v-bind:key="account.value">
+              <CButton color="info" size="sm" @click.stop.prevent="editAccount(account)">
                 {{account.label}}
               </CButton>
             </template>
@@ -190,25 +191,26 @@
   </CCard>
 </template>
 <script>
-import authMixin from '@/mixins/auth'
-import {GET_USER, GET_USERS, REMOVE_USER, SET_USER, SET_USER_ENABLE} from '../../store/actions/users'
-import {mapState} from 'vuex'
-import {GET_ROLES} from '../../store/actions/roles'
-import Multiselect from 'vue-multiselect'
-import {GET_ACCOUNTS} from "../../store/actions/accounts";
+import authMixin from "@/mixins/auth"
+import {GET_USER, GET_USERS, REMOVE_USER, SET_USER} from "@/store/actions/users"
+import {mapState} from "vuex"
+import {GET_ROLES} from "@/store/actions/roles"
+import Multiselect from "vue-multiselect"
+import {GET_ACCOUNTS} from "@/store/actions/accounts";
+import moment from "moment";
 
 export default {
-  name: 'Users',
+  name: "Users",
   mixins: [authMixin],
   components: {
     Multiselect
   },
-  props: ['_user', '_users'],
+  props: ["_user", "_users"],
   watch: {
     _users: {
       immediate: true,
       handler () {
-        this.fetchUsers()
+        this.fetch()
       }
     },
     _user: {
@@ -298,25 +300,24 @@ export default {
       }
       this.darkModal = false
     },
-    edit (user) {
-      this.dispatch(GET_USER, user)
+    edit (item) {
+      this.dispatch(GET_USER, item)
     },
     editRole (role) {
-      this.$emit('editRole', {
+      this.$emit("editRole", {
         role: this.roles.find(r => r.id === role.value)
       })
     },
     editAccount (account) {
-      console.log(account)
-      this.$emit('editAccount', {
+      this.$emit("editAccount", {
         account: this.accounts.find(a => a.id === account.value)
       })
     },
-    remove (user) {
-      this.dispatch(REMOVE_USER, user)
+    remove (item) {
+      this.dispatch(REMOVE_USER, item)
     },
-    loadUser(user) {
-      user.roles = user.roles
+    load(item) {
+      item.roles = item.roles
         .map(roleId => {
           const role = this.roles.find(role => role.id === roleId)
           if (role) {
@@ -327,7 +328,7 @@ export default {
           }
         })
         .filter(role => !!role)
-      user.accounts = user.accounts
+      item.accounts = item.accounts
           .map(accountId => {
             const account = this.accounts.find(account => account.id === accountId)
             if (account) {
@@ -338,69 +339,67 @@ export default {
             }
           })
           .filter(account => !!account)
-      this.itemForUpdate = user
+      this.itemForUpdate = item
       this.darkModal = true
     },
-    dispatch (itemForUpdate, user) {
+    dispatch (itemForUpdate, item) {
       this.apiError.message = undefined
-      this.$store.dispatch(itemForUpdate, {url: this.url, user: user})
-          .then(r => {
-            if (r.user) {
+      this.$store.dispatch(itemForUpdate, {url: this.url, item})
+          .then(response => {
+            if (response.id) {
               if (itemForUpdate === GET_USER) {
-                // copy role to prevent mutations in store
-                this.loadUser(JSON.parse(JSON.stringify(r.user)))
+                // copy response to prevent mutations in store
+                this.load(JSON.parse(JSON.stringify(response)))
               } else if (itemForUpdate === SET_USER) {
                 this.reset()
                 this.fetchRoles()
                 this.fetchAccounts()
-              } else if (itemForUpdate === SET_USER_ENABLE){
-                this.fetchUsers()
               } else if (itemForUpdate === REMOVE_USER){
                 this.fetchRoles()
               } else {
-                console.log(itemForUpdate, r.user)
+                console.log(itemForUpdate, response.user)
               }
             }
-            if (r.users) {
-              this.fetchUsers()
+            if (response.users) {
+              this.fetch()
             }
-            if (r.message) {
-              console.log(r)
+            if (response.message) {
+              console.log(response)
             }
           })
           .catch(e => {
             this.apiError.message = e.message
-            this.fetchUsers()
+            this.fetch()
             setTimeout(() => {
               this.apiError.message = undefined;
             }, 10000);
           })
     },
-    handleEnabled (user) {
-      user.enabled = !user.enabled
-      this.dispatch(SET_USER_ENABLE, user)
+    handleEnabled (item) {
+      item.enabled = !item.enabled
+      this.dispatch(SET_USER, item)
     },
-    handle2FA (user) {
-      user.secret = ""
-      this.dispatch(SET_USER, user)
+    handle2FA (item) {
+      item.secret = ""
+      this.dispatch(SET_USER, item)
     },
-    fetchUsers () {
+    fetch () {
       this.$store.dispatch(GET_USERS, {url: this.url})
-        .then(r => {
+        .then(items => {
           this.tableFields = [
-            { key: 'id'},
-            { key: 'gravatar', label: '', _classes: 'text-left' },
-            { key: 'username', label: 'username', _classes: 'text-left' },
-            { key: 'email' },
-            { key: 'updated' },
-            { key: 'enabled', label: 'enabled', _classes: 'text-left' }
+            { key: "id"},
+            { key: "gravatar", label: "", _classes: "text-left" },
+            { key: "username", label: "username", _classes: "text-left" },
+            { key: "email" },
+            { key: "updated" },
+            { key: "enabled", label: "enabled", _classes: "text-left" }
           ]
           if (this.isSuperAdmin || this.isAdmin) {
-            this.tableFields.push({ key: 'roles' })
-            this.tableFields.push({ key: 'accounts' })
-            this.tableFields.push({ key: 'controls' })
+            this.tableFields.push({ key: "roles" })
+            this.tableFields.push({ key: "accounts" })
+            this.tableFields.push({ key: "controls" })
           }
-          this.tableItems = r.map(user => {
+          this.tableItems = items.map(user => {
             const roles = user.roles.map(roleId => {
               const role = this.roles.find(role => role.id === roleId)
               if (role && role.title) {
@@ -419,7 +418,7 @@ export default {
               email: user.email,
               gravatar: user.gravatar,
               created: user.created,
-              updated: user.updated,
+              updated: moment(user.updated).format("DD/MM/YYYY hh:mm:ss"),
               enabled: user.enabled,
               roles: roles,
               accounts: accounts,
@@ -435,8 +434,8 @@ export default {
       this.$store.dispatch(GET_ROLES, {url: this.url})
           .then(roles => {
             if (roles) {
-              this.fetchUsers()
-              this.$emit('updateRoles', {
+              this.fetch()
+              this.$emit("updateRoles", {
                 roles: roles
               })
             }
@@ -449,8 +448,8 @@ export default {
       this.$store.dispatch(GET_ACCOUNTS, {url: this.url})
           .then(accounts => {
             if (accounts) {
-              this.fetchUsers()
-              this.$emit('updateAccounts', {
+              this.fetch()
+              this.$emit("updateAccounts", {
                 accounts: accounts
               })
             }

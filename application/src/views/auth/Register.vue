@@ -92,13 +92,13 @@ export default {
       this.apiError.message = ''
       if (this.validate()) {
         this.$store.dispatch(AUTH_SIGNUP, {user: this.user, url: this.url})
-            .then(r => {
-              if (r.message) {
-                this.apiError.message = r.message
+            .then(response => {
+              if (response.message) {
+                this.apiError.message = response.message
                 this.disabled = false
               }
               this.disabled = false
-              if (r.user) {
+              if (response.id) {
                 this.$router.push({
                   name: '2fa'
                 })

@@ -24,10 +24,9 @@
 </template>
 
 <script>
-
-import Roles from "../components/dashboard/Roles";
-import Users from "../components/dashboard/Users";
-import Accounts from "../components/dashboard/Accounts";
+import Roles from '../components/dashboard/Roles'
+import Users from '../components/dashboard/Users'
+import Accounts from '../components/dashboard/Accounts'
 
 export default {
   name: 'Dashboard',

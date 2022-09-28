@@ -44,10 +44,10 @@ const NO_SYMBOL_CURRENCY_FORMATTER = {
   bnEUR
 }
 
-// This filter gets the user selected currency and formats your value to match that currency.
+// This filter gets the response selected currency and formats your value to match that currency.
 export function currency (value) {
   // Normally we would use Vuex but for the sake of this example I will use localstorage
-  // to retrieve the user selected currency. Needs to be one of EUR|USD.
+  // to retrieve the response selected currency. Needs to be one of EUR|USD.
   const userSelectedCurrency = localStorage.getItem('User/selectedCurrency')
 
   return CURRENCY_FORMATTER[userSelectedCurrency](value).format()
@@ -61,7 +61,7 @@ export function currencyWithoutSymbol (value) {
 }
 
 // This filter allow you to format a different fiat currency than the one
-// selected by the user.
+// selected by the response.
 export function toCurrency (value, symbol) {
   return CURRENCY_FORMATTER[symbol](value).format()
 }

@@ -1,6 +1,6 @@
 import { createLocalVue, shallowMount } from '@vue/test-utils'
 import CoreuiVue from '@coreui/vue'
-import Users from '@/views/users/Users'
+import Users from '@/views/response/Users'
 import VueRouter from 'vue-router';
 
 const localVue = createLocalVue()

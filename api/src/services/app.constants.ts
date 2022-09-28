@@ -4,18 +4,22 @@ export const APP_SERVICE        = "app";
 export const SERVER_SERVICE     = "server";
 export const POSTGRES_SERVICE   = "postgres";
 export const REDIS_SERVICE      = "redis";
-export const REDIS_SUB_SERVICE  = "redisSub";
-export const REDIS_PUB_SERVICE  = "redisPub";
-export const MONGODB_SERVICE    = "mongodb";
 
 export const PROMETHEUS_SERVICE = "prometheus";
 export const EMITTER_SERVICE    = "emitter";
-export const FETCH_JSON_SERVICE    = "fetchJSON";
+export const SCHEDULER_SERVICE     = "scheduler";
+export const SUBSCRIBE_CLIENT  = "subscribe";
 
+export const ROLE_REPOSITORY = "roleRepository";
+export const USER_REPOSITORY = "userRepository";
 
-export const ROLE_REPOSITORY_SERVICE = "roleRepository";
-export const USER_REPOSITORY_SERVICE = "userRepository";
-export const ACCOUNT_REPOSITORY_SERVICE = "accountRepository";
+export const TIMESERIES_REPOSITORY = "timeseriesRepository";
+
+export const ACCOUNT_REPOSITORY = "accountRepository";
+
+export const TASK_REPOSITORY = "taskRepository";
+
+export const SCHEDULER_CLIENT = "schedulerClient";
 
 
 

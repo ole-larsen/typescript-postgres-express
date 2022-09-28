@@ -12,6 +12,7 @@
           :fields="tableFields"
           head-color="light"
           no-sorting
+          selectable
       >
 
         <td slot="enabled" slot-scope="{item}">
@@ -117,9 +118,9 @@
 <script>
 import Multiselect from 'vue-multiselect'
 import authMixin from '@/mixins/auth'
-import {GET_ROLE, GET_ROLES, REMOVE_ROLE, SET_ROLE, SET_ROLE_ENABLE} from '../../store/actions/roles'
+import {GET_ROLE, GET_ROLES, REMOVE_ROLE, SET_ROLE} from "@/store/actions/roles"
 import {mapState} from 'vuex'
-import {GET_USERS} from '../../store/actions/users'
+import {GET_USERS} from "@/store/actions/users"
 
 export default {
   name: 'Roles',
@@ -130,7 +131,7 @@ export default {
     _roles: {
       immediate: true,
       handler () {
-        this.fetchRoles()
+        this.fetch()
       }
     },
     _role: {
@@ -194,9 +195,9 @@ export default {
       }
       this.darkModal = false
     },
-    edit (role) {
-      if (role) {
-        this.dispatch(GET_ROLE, role)
+    edit (item) {
+      if (item) {
+        this.dispatch(GET_ROLE, item)
       }
     },
     editUser (user) {
@@ -204,11 +205,11 @@ export default {
         user: this.users.find(u => u.id === user.value)
       })
     },
-    remove (role) {
-      this.dispatch(REMOVE_ROLE, role)
+    remove (item) {
+      this.dispatch(REMOVE_ROLE, item)
     },
-    loadRole(role) {
-      role.users = role.users
+    load(item) {
+      item.users = item.users
           .map(userId => {
             const user = this.users.find(user => user.id === userId)
             if (user) {
@@ -220,39 +221,37 @@ export default {
             }
           })
           .filter(user => !!user)
-      this.itemForUpdate = role
+      this.itemForUpdate = item
       this.darkModal = true
     },
-    dispatch (itemForUpdate, role) {
+    dispatch (itemForUpdate, item) {
       this.apiError.message = undefined
-      this.$store.dispatch(itemForUpdate, {url: this.url, role: role})
-          .then(r => {
-            if (r.role) {
+      this.$store.dispatch(itemForUpdate, {url: this.url, item})
+          .then(response => {
+            if (response.id) {
               if (itemForUpdate === GET_ROLE) {
-                // copy role to prevent mutations in store
-                this.loadRole(JSON.parse(JSON.stringify(r.role)))
+                // copy response to prevent mutations in store
+                this.load(JSON.parse(JSON.stringify(response)))
               } else if (itemForUpdate === SET_ROLE) {
                 this.reset()
                 this.fetchUsers()
-              } else if (itemForUpdate === SET_ROLE_ENABLE) {
-                this.fetchRoles()
               } else if (itemForUpdate === REMOVE_ROLE){
                 this.fetchUsers()
               } else {
-                console.log(itemForUpdate, r.role)
+                console.log(itemForUpdate, response.role)
               }
             }
-            if (r.roles) {
-              this.fetchRoles()
+            if (response.roles) {
+              this.fetch()
             }
-            if (r.message) {
-              console.log(r)
+            if (response.message) {
+              console.log(response)
             }
           })
           .catch(e => {
             console.log(e)
             this.apiError.message = e.message
-            this.fetchRoles()
+            this.fetch()
             this.fetchUsers()
             setTimeout(() => {
               this.apiError.message = undefined;
@@ -261,11 +260,11 @@ export default {
     },
     handleChangeEnabled (item) {
       item.enabled = !item.enabled
-      this.dispatch(SET_ROLE_ENABLE, item)
+      this.dispatch(SET_ROLE, item)
     },
-    fetchRoles () {
+    fetch () {
       this.$store.dispatch(GET_ROLES, {url: this.url})
-        .then(roles => {
+        .then(items => {
           this.tableFields = [
             { key: 'id'},
             { key: 'title', label: '', _classes: 'text-left' },
@@ -277,7 +276,7 @@ export default {
             this.tableFields.push({ key: 'users' })
             this.tableFields.push({ key: 'controls' })
           }
-          this.tableItems = roles.map(role => {
+          this.tableItems = items.map(role => {
             const users = role.users.map(userId => {
               const user = this.users.find(user => user.id === userId)
               if (user && user.username) {
@@ -303,7 +302,7 @@ export default {
       this.$store.dispatch(GET_USERS, {url: this.url})
           .then(users => {
             if (users) {
-              this.fetchRoles()
+              this.fetch()
               this.$emit('updateUsers', {
                 users: users
               })

@@ -1,1 +1,11 @@
 // Here you can add other styles
+.enabled {
+  div {
+    display: inline-block;
+  }
+  label {
+    position: relative;
+    left: 8px;
+    top: 5px;
+  }
+}

@@ -12,6 +12,7 @@
           :fields="tableFields"
           head-color="light"
           no-sorting
+          selectable
       >
 
         <td slot="enabled" slot-scope="{item}">
@@ -58,14 +59,6 @@
         <CAlert show color="danger" v-if="apiError.message" v-html="apiError.message">Danger Alert</CAlert>
         <CForm>
           <CInput
-              description="account uid"
-              label="UID"
-              type="text"
-              horizontal
-              autocomplete="uid"
-              v-model="itemForUpdate.uid"
-          />
-          <CInput
               description="account name"
               label="Name"
               horizontal
@@ -80,23 +73,6 @@
               autocomplete="email"
               v-model="itemForUpdate.email"
           />
-
-          <CInput
-              description="account fid"
-              label="Fargo ID"
-              type="text"
-              horizontal
-              autocomplete="fid"
-              v-model="itemForUpdate.fid"
-          />
-          <CInput
-              description="account fid"
-              label="Customer Portal ID"
-              type="text"
-              horizontal
-              autocomplete="customerPortalId"
-              v-model="itemForUpdate.customerPortalId"
-          />
           <CInput
               description="account status"
               label="Status"
@@ -105,20 +81,6 @@
               autocomplete="status"
               v-model="itemForUpdate.status"
           />
-          <CRow form class="form-group" v-if="isSuperAdmin">
-            <CCol tag="label" sm="3" class="col-form-label">
-              Account Type
-            </CCol>
-            <CCol sm="9">
-
-              <CSelect
-                  horizontal
-                  :value.sync="itemForUpdate.type"
-                  :options="selectOptions"
-                  placeholder="Please select"
-              />
-            </CCol>
-          </CRow>
           <CRow form class="form-group margin-top-30" v-if="isSuperAdmin">
             <CCol tag="label" sm="3" class="col-form-label">
               Users
@@ -165,28 +127,13 @@
 import Multiselect from 'vue-multiselect'
 import authMixin from '@/mixins/auth'
 import {mapState} from 'vuex'
-import {GET_ACCOUNT, GET_ACCOUNTS, REMOVE_ACCOUNT, SET_ACCOUNT, SET_ACCOUNT_ENABLE} from "../../store/actions/accounts";
-import {GET_USERS} from "../../store/actions/users";
+import {GET_ACCOUNT, GET_ACCOUNTS, REMOVE_ACCOUNT, SET_ACCOUNT} from "@/store/actions/accounts";
+import {GET_USERS} from "@/store/actions/users";
 
 export default {
   name: 'Accounts',
   mixins: [authMixin],
   components: { Multiselect },
-  props: ['_account', '_accounts'],
-  watch: {
-    _accounts: {
-      immediate: true,
-      handler () {
-        this.fetchAccounts()
-      }
-    },
-    _account: {
-      immediate: true,
-      handler (account) {
-        this.edit(account)
-      }
-    }
-  },
   computed: {
     ...mapState({
       users: state => state.users.users.map(user => {
@@ -199,13 +146,10 @@ export default {
     })
   },
   mounted () {
-    this.fetchAccounts()
+    this.fetch()
   },
   data () {
     return {
-      selectOptions: [
-        'ltv', 'swap', 'svf'
-      ],
       apiError: {
         message: undefined
       },
@@ -216,13 +160,9 @@ export default {
         id: undefined,
         name: undefined,
         email: undefined,
-        uid: undefined,
-        fid: undefined,
-        customerPortalId: undefined,
-        type: undefined,
         status: undefined,
         enabled: undefined,
-        users: undefined
+        users: []
       }
     }
   },
@@ -233,25 +173,22 @@ export default {
     },
     update () {
       this.dispatch(SET_ACCOUNT, this.itemForUpdate)
+      this.darkModal = false
     },
     reset () {
       this.itemForUpdate = {
         id: undefined,
         name: undefined,
         email: undefined,
-        uid: undefined,
-        fid: undefined,
-        customerPortalId: undefined,
-        type: undefined,
         status: undefined,
         enabled: undefined,
-        users: undefined
+        users: []
       }
       this.darkModal = false
     },
-    edit (account) {
-      if (account) {
-        this.dispatch(GET_ACCOUNT, account)
+    edit (item) {
+      if (item) {
+        this.dispatch(GET_ACCOUNT, item)
       }
     },
     editUser (user) {
@@ -259,11 +196,11 @@ export default {
         user: this.users.find(u => u.id === user.id)
       })
     },
-    remove (account) {
-      this.dispatch(REMOVE_ACCOUNT, account)
+    remove (item) {
+      this.dispatch(REMOVE_ACCOUNT, item)
     },
-    loadAccount(account) {
-      account.users = account.users
+    load(item) {
+      item.users = item.users
           .map(userId => {
             const user = this.users.find(user => user.id === userId)
             if (user) {
@@ -275,40 +212,31 @@ export default {
             }
           })
           .filter(user => !!user)
-      this.itemForUpdate = account
+      this.itemForUpdate = item
       this.darkModal = true
     },
-    dispatch (itemForUpdate, account) {
+    dispatch (itemForUpdate, item) {
       this.apiError.message = undefined
-      this.$store.dispatch(itemForUpdate, {url: this.url, account: account})
-          .then(r => {
-            if (r.account) {
+      this.$store.dispatch(itemForUpdate, {url: this.url, item})
+          .then(response => {
+            if (response.id) {
               if (itemForUpdate === GET_ACCOUNT) {
-                // copy role to prevent mutations in store
-                this.loadAccount(JSON.parse(JSON.stringify(r.account)))
+                // copy response to prevent mutations in store
+                this.load(JSON.parse(JSON.stringify(response)))
               } else if (itemForUpdate === SET_ACCOUNT) {
                 this.reset()
-                this.fetchUsers()
-              } else if (itemForUpdate === SET_ACCOUNT_ENABLE) {
-                this.fetchAccounts()
+                this.fetch()
               } else if (itemForUpdate === REMOVE_ACCOUNT){
-                this.fetchAccounts()
-              } else {
-                console.log(itemForUpdate, r.account)
+                this.fetch()
               }
             }
-            if (r.accounts) {
-              console.log(r.accounts)
-              this.fetchAccounts()
-            }
-            if (r.message) {
-              console.log(r)
+            if (response.message) {
+              this.apiError.message = response.message
             }
           })
           .catch(e => {
-            console.log(e)
             this.apiError.message = e.message
-            this.fetchAccounts()
+            this.fetch()
             setTimeout(() => {
               this.apiError.message = undefined;
             }, 10000);
@@ -316,19 +244,16 @@ export default {
     },
     handleChangeEnabled (item) {
       item.enabled = !item.enabled
-      this.dispatch(SET_ACCOUNT_ENABLE, item)
+      this.dispatch(SET_ACCOUNT, item)
     },
-    fetchAccounts () {
+    async fetch () {
+      await this.fetchUsers()
       this.$store.dispatch(GET_ACCOUNTS, {url: this.url})
-        .then(accounts => {
+        .then(items => {
           this.tableFields = [
             { key: 'id'},
             { key: 'name', label: '', _classes: 'text-left' },
             { key: 'email' },
-            { key: 'fid' },
-            { key: 'uid' },
-            { key: 'customerPortalId' },
-            { key: 'type' },
             { key: 'status' },
             { key: 'updated' },
             { key: 'enabled', _classes: 'text-left' }
@@ -337,7 +262,7 @@ export default {
             this.tableFields.push({ key: 'users' })
             this.tableFields.push({ key: 'controls' })
           }
-          this.tableItems = JSON.parse(JSON.stringify(accounts)).map(account => {
+          this.tableItems = JSON.parse(JSON.stringify(items)).map(account => {
             account.users = account.users
                 .map(userId => {
                   const user = this.users.find(user => user.id === userId)
@@ -354,10 +279,6 @@ export default {
               id:               account.id,
               name:             account.name,
               email:            account.email,
-              fid:              account.fid,
-              uid:              account.uid,
-              customerPortalId: account.customerPortalId,
-              type:             account.type,
               status:           account.status,
               updated:          account.updated,
               enabled:          account.enabled,
@@ -373,7 +294,6 @@ export default {
       this.$store.dispatch(GET_USERS, {url: this.url})
           .then(users => {
             if (users) {
-              this.fetchAccounts()
               this.$emit('updateUsers', {
                 users: users
               })

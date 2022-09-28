@@ -1,0 +1,1 @@
+export const NATS_CONNECTION_NAME= "service.nats.subscriber";

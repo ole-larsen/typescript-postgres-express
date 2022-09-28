@@ -71,26 +71,36 @@
 </template>
 
 <script>
-import {AUTH_SIGNIN} from "../../store/actions/auth";
+import {AUTH_LOGIN} from "@/store/actions/auth";
 import authMixin from '@/mixins/auth'
 export default {
   name: 'Login',
   mixins: [authMixin],
   methods: {
     validate () {
+      if (!this.user.password) {
+        this.apiError.message = 'password must not be empty'
+      }
+      if (!this.user.email) {
+        this.apiError.message = 'email must not be empty'
+      }
       return this.user.email !== '' && this.user.password !== ''
     },
     submit () {
       this.disabled = true
       this.apiError.message = ''
+      setTimeout(() => {
+        this.disabled = false;
+        this.apiError.message = ''
+      }, 3000)
       if (this.validate()) {
-        this.$store.dispatch(AUTH_SIGNIN, {user: this.user, url: this.url})
-          .then(r => {
-            if (r.message) {
-              this.apiError.message = r.message
+        this.$store.dispatch(AUTH_LOGIN, {user: this.user, url: this.url})
+          .then(response => {
+            if (response.message) {
+              this.apiError.message = response.message
               this.disabled = false
             }
-            if (r.user) {
+            if (response.id) {
               this.$router.push({
                 name: '2fa'
               })
@@ -106,7 +116,7 @@ export default {
             this.disabled = false
           })
       } else {
-        console.log('here is going auth error')
+
       }
       return false
     }

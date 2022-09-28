@@ -53,7 +53,7 @@
 
 <script>
   import authMixin from '@/mixins/auth'
-  import {AUTH_LOGOUT, USER_2FA_REQUEST} from '../../store/actions/auth'
+  import {AUTH_LOGOUT, AUTH_2FA_REQUEST} from '../../store/actions/auth'
 
   export default {
   name: 'Ga2fa',
@@ -97,10 +97,10 @@
       this.apiError.message = ''
       if (this.validate()) {
         this.user.id = (JSON.parse(localStorage.getItem('user'))).id
-        this.$store.dispatch(USER_2FA_REQUEST, {user: this.user, url: this.url})
-            .then(r => {
-              if (r) {
-                if (r['access_token']) {
+        this.$store.dispatch(AUTH_2FA_REQUEST, {user: this.user, url: this.url})
+            .then(response => {
+              if (response) {
+                if (response['access_token']) {
                   this.$router.push({
                     name: 'Home'
                   })
@@ -120,7 +120,6 @@
       this.user = JSON.parse(localStorage.getItem('user'))
       this.$store.dispatch(AUTH_LOGOUT, {user: this.user, url: this.url})
           .then(r => {
-            console.log(r)
             if (r.user) {
               localStorage.removeItem('access_token')
               localStorage.removeItem('token_type')

@@ -56,7 +56,7 @@
 
 <script>
 import authMixin from '@/mixins/auth'
-import {USER_RESET} from "../../store/actions/auth";
+import {AUTH_RESET} from "../../store/actions/auth";
 
 export default {
   name: 'Reset',
@@ -86,13 +86,12 @@ export default {
       this.apiNote.message = ''
       const token = this.$route.params.token
       if (this.validate()) {
-        this.$store.dispatch(USER_RESET, {token: token, url: this.url, user: this.user})
-            .then(r => {
-              console.log(r)
-              if (r && r.message) {
-                this.apiError.message = r.message
+        this.$store.dispatch(AUTH_RESET, {token: token, url: this.url, user: this.user})
+            .then(response => {
+              if (response && response.message) {
+                this.apiError.message = response.message
               }
-              if (r && r.user) {
+              if (response && response.id) {
                 this.$router.push({
                   name: 'Login'
                 })

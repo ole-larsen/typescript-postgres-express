@@ -1,4 +1,4 @@
-FROM node:16-alpine AS build
+FROM node:alpine AS build
 WORKDIR /server
 COPY package.json .
 COPY package-lock.json .
@@ -7,7 +7,7 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-FROM node:16-alpine AS production
+FROM node:alpine AS production
 EXPOSE 3010
 WORKDIR /app
 COPY package.json .

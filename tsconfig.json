@@ -16,8 +16,7 @@
                 "node_modules/*",
                 "api/src/types/*",
                 "api/src/certs/*"
-            ],
-            "prom-client": ["node_modules/prom-client/index"]
+            ]
         },
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,

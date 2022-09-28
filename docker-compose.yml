@@ -24,7 +24,7 @@ services:
       SERVER_PORT: "3010"
     links:
       - app001-backend:app001-backend
-      - app001-provider:app001-provider
+#      - app001-provider:app001-provider
     networks:
       - service-web
     restart: always
@@ -53,16 +53,16 @@ services:
     env_file:
       - .env
   app001-provider:
-    container_name: app001-provider
+    container_name:   app001-provider
     build:
       context: ./provider/.
       args:
         NODE_ENV: "production"
-        PORT: 5551
+        PORT: 5555
     env_file:
       - .env
     ports:
-      - 5551:5551
+      - 5555:5555
     networks:
       - service-web
     restart: always
@@ -87,29 +87,7 @@ services:
       - service-web
     volumes:
       - ./docker/postgresql/db:/var/lib/postgresql/data/pgdata
-      - ./docker/postgresql:/etc/postgesql
-    command: postgres -c config_file=/etc/postgesql/postgresql.conf
-  app001-postgres-test:
-    image: timescale/timescaledb:2.5.1-pg14
-    container_name: app001-postgres-test
-    environment:
-      - POSTGRES_USER=services
-      - POSTGRES_PASSWORD=services
-      - POSTGRES_DB=services
-      - PGDATA=/var/lib/postgresql/data/pgdata
-    ports:
-      - "5433:5433"
-    healthcheck:
-      test: [ "CMD", "pg_isready" , "-U", "trade" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - service-web
-    volumes:
-      - ./docker/postgresql/db-test:/var/lib/postgresql/data/pgdata
-      - ./docker/postgresql:/etc/postgesql
-    command: postgres -c config_file=/etc/postgesql/postgresql-test.conf
+      - ./docker/postgresql:/etc/postgresql
   app001-migrator:
     links:
       - app001-postgres
