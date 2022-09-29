@@ -4,7 +4,7 @@ import {ITaskClient} from "./interfaces/task.client.interface";
 import {ITaskServiceRepository} from "../../infrastructure/database/postgres/interface/task.repository.interface";
 import {TaskEntity} from "../../tasks/task.entity";
 
-export class HttpService {
+export class TaskService {
     private readonly client: ITaskClient;
     private readonly repository: ITaskServiceRepository;
 

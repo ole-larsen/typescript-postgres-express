@@ -5,16 +5,16 @@ import {
     CONFIG_SERVICE,
     SCHEDULER_SERVICE
 } from "../app.constants";
-import {HttpService} from "../http/http.service";
+import {TaskService} from "../task/task.service";
 import {TaskEntity} from "../../tasks/task.entity";
 import {MetricsSchedulerService} from "./metrics.scheduler.service";
 
-export class TaskService extends BaseScheduler {
-    private readonly httpService: HttpService;
+export class TaskScheduler extends BaseScheduler {
+    private readonly httpService: TaskService;
 
     constructor(cronExpression: string = Service.getService<Config>(CONFIG_SERVICE).schedulers.httpScheduler || "*/1 * * * *") {
         super(cronExpression);
-        this.httpService = Service.getService<HttpService>(SCHEDULER_SERVICE);
+        this.httpService = Service.getService<TaskService>(SCHEDULER_SERVICE);
     }
 
     public work(): void {

@@ -4,21 +4,21 @@ import {Service} from "../app.service";
 import {
   SCHEDULER_SERVICE, TIMESERIES_REPOSITORY
 } from "../app.constants";
-import {HttpService} from "../http/http.service";
+import {TaskService} from "../task/task.service";
 import {TaskEntity} from "../../tasks/task.entity";
 import {ITimeSeriesServiceRepository} from "../../infrastructure/database/postgres/interface/timeseries.repository.interface";
 import {TimeSeriesEntity} from "../../timeseries/timeseries.entity";
 
 export class MetricsSchedulerService extends BaseScheduler {
   private readonly taskEntity: TaskEntity;
-  private readonly httpService: HttpService;
+  private readonly httpService: TaskService;
   private readonly repository: ITimeSeriesServiceRepository;
 
   constructor(entity: TaskEntity) {
     super(entity.config.scheduler);
 
     this.taskEntity = entity;
-    this.httpService = Service.getService<HttpService>(SCHEDULER_SERVICE);
+    this.httpService = Service.getService<TaskService>(SCHEDULER_SERVICE);
     this.repository = Service.getRepository(TIMESERIES_REPOSITORY);
   }
 

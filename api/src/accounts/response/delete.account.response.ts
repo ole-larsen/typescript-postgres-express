@@ -9,4 +9,4 @@ export class DeleteAccountResponse extends BaseResponse {
     super();
     this.data = { id };
   }
-};
+}

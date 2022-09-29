@@ -45,17 +45,17 @@ import {IRoleServiceRepository} from "../infrastructure/database/postgres/interf
 import {accountRoutes} from "../accounts/account.route";
 
 import {ITaskServiceRepository} from "../infrastructure/database/postgres/interface/task.repository.interface";
-import {ITaskClient} from "./http/interfaces/task.client.interface";
-import {HttpService} from "./http/http.service";
+import {ITaskClient} from "./task/interfaces/task.client.interface";
+import {TaskService} from "./task/task.service";
 import {ISubscribeServiceInterface} from "./subscribe/interfaces/subscribe.interface";
 import {SubscribeNatsService} from "./subscribe/subscribe.nats.service";
 import {IRedisFactory, RedisFactory} from "../infrastructure/database/redis/factory/redis.factory";
-import {TaskService} from "./schedulers/task.service";
+import {TaskScheduler} from "./schedulers/task.scheduler";
 import {HttpExceptionMessages, HttpStatus} from "../infrastructure/exception/auth.exception.messages";
 import {TaskRepository} from "../tasks/task.repository";
 import {IPostgresFactory} from "../infrastructure/database/postgres/factory/postgres.factory.interface";
 import {PostgresFactory} from "../infrastructure/database/postgres/factory/postgres.factory";
-import {TaskClient} from "./http/client/task.client";
+import {TaskClient} from "./task/client/task.client";
 import {taskRoutes} from "../tasks/task.route";
 import {HttpException} from "../infrastructure/exception/http.exception";
 import {TimeSeriesRepository} from "../timeseries/timeseries.repository";
@@ -69,6 +69,7 @@ export class Service {
       [name: string]: MetricsSchedulerService
     }
   }
+
   static service: {
     [name: string]:
       Logger |
@@ -78,7 +79,7 @@ export class Service {
       core.Express |
       PrometheusService |
       EventEmitter |
-      HttpService;
+      TaskService;
   };
 
   static repository: {
@@ -148,7 +149,7 @@ export class Service {
     IRedisFactory |
     core.Express |
     PrometheusService |
-    EventEmitter | HttpService>(name: string, service: T): void {
+    EventEmitter | TaskService>(name: string, service: T): void {
     if (!Service.service) {
       Service.service = {};
     }
@@ -162,7 +163,7 @@ export class Service {
     IRedisFactory |
     core.Express |
     PrometheusService |
-    EventEmitter | HttpService>(name: string): T {
+    EventEmitter | TaskService>(name: string): T {
     if (!Service.service) {
       return undefined;
     }
@@ -403,7 +404,7 @@ export class Service {
     Service.addClient(SCHEDULER_CLIENT, new TaskClient());
     Service.addClient(SUBSCRIBE_CLIENT, new SubscribeNatsService());
 
-    Service.addService(SCHEDULER_SERVICE, new HttpService());
+    Service.addService(SCHEDULER_SERVICE, new TaskService());
 
     return this;
   }
@@ -532,7 +533,7 @@ export class Service {
     if (process.env.NODE_ENV === "test" || enabled === false) {
       return this;
     }
-    new TaskService();
+    new TaskScheduler();
     return this;
   }
 
