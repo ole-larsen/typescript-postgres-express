@@ -1,6 +1,6 @@
 application
 dist
 provider
-docker
+.docker
 build
 node_modules

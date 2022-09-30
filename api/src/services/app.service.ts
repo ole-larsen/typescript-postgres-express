@@ -21,7 +21,7 @@ import {
   SERVER_SERVICE,
   TASK_REPOSITORY,
   SCHEDULER_CLIENT,
-  SCHEDULER_SERVICE,
+  TASK_SERVICE,
   REDIS_SERVICE, SUBSCRIBE_CLIENT, LOGGER_SERVICE, TIMESERIES_REPOSITORY,
 } from "./app.constants";
 
@@ -62,6 +62,7 @@ import {TimeSeriesRepository} from "../timeseries/timeseries.repository";
 import {ITimeSeriesServiceRepository} from "../infrastructure/database/postgres/interface/timeseries.repository.interface";
 import {timeSeriesRoutes} from "../timeseries/timeseries.route";
 import {MetricsSchedulerService} from "./schedulers/metrics.scheduler.service";
+import {AnyDayVariable} from "app";
 
 export class Service {
   static schedulers: {
@@ -95,7 +96,7 @@ export class Service {
     [name: string]: ITaskClient | ISubscribeServiceInterface;
   };
 
-  static fetchJSON (url: string, parameters: any = {}): Promise<any> {
+  static fetchJSON (url: string, parameters: AnyDayVariable = {}): Promise<AnyDayVariable> {
     return new Promise(async (resolve, reject) => {
       try {
         const response = await fetch(url, parameters).catch(e => reject(e));
@@ -404,7 +405,7 @@ export class Service {
     Service.addClient(SCHEDULER_CLIENT, new TaskClient());
     Service.addClient(SUBSCRIBE_CLIENT, new SubscribeNatsService());
 
-    Service.addService(SCHEDULER_SERVICE, new TaskService());
+    Service.addService(TASK_SERVICE, new TaskService());
 
     return this;
   }

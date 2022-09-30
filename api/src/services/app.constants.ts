@@ -7,7 +7,7 @@ export const REDIS_SERVICE      = "redis";
 
 export const PROMETHEUS_SERVICE = "prometheus";
 export const EMITTER_SERVICE    = "emitter";
-export const SCHEDULER_SERVICE     = "scheduler";
+export const TASK_SERVICE  = "taskService";
 export const SUBSCRIBE_CLIENT  = "subscribe";
 
 export const ROLE_REPOSITORY = "roleRepository";

@@ -46,12 +46,11 @@ export class SubscribeNatsService implements ISubscribeServiceInterface {
       // check if the close was OK
       const e = await done;
       if (e) {
-        this.logger.error(e.message, { service: "nats" });
         throw e;
       }
       return this.nc;
     } catch (e) {
-      this.logger.error(e, { service: "nats", message: `error connecting to ${this.nc.getServer()}` });
+      this.logger.error(e, { service: "nats", message: `error closing connection to ${this.nc.getServer()}` });
       throw e;
     }
   }

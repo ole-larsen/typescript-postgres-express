@@ -10,12 +10,12 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./docker/nginx/vhosts:/etc/nginx/conf.d
-      - ./docker/nginx/logs:/var/log/nginx
-      - ./docker/nginx/ssl:/etc/nginx/ssl
-      - ./docker/certbot-etc:/etc/letsencrypt
-      - ./docker/certbot-var:/var/lib/letsencrypt
-      - ./docker/dhparam:/etc/ssl/certs
+      - ./.docker/nginx/vhosts:/etc/nginx/conf.d
+      - ./.docker/nginx/logs:/var/log/nginx
+      - ./.docker/nginx/ssl:/etc/nginx/ssl
+      - ./.docker/certbot-etc:/etc/letsencrypt
+      - ./.docker/certbot-var:/var/lib/letsencrypt
+      - ./.docker/dhparam:/etc/ssl/certs
       - /var/www/node_modules
       - .env:/var/www/application/.env:ro
     environment:
@@ -24,7 +24,7 @@ services:
       SERVER_PORT: "3010"
     links:
       - app001-backend:app001-backend
-#      - app001-provider:app001-provider
+      - app001-provider:app001-provider
     networks:
       - service-web
     restart: always
@@ -35,8 +35,6 @@ services:
       args:
         NODE_ENV: 'production'
         SERVER_PORT: 3010
-    ports:
-      - 3010:3010
     networks:
       - service-web
     restart: always
@@ -47,13 +45,13 @@ services:
       - app001-provider
       - app001-postgres
     volumes:
-      - ./docker/certbot-etc:/etc/letsencrypt
-      - ./docker/certbot-var:/var/lib/letsencrypt
+      - ./.docker/certbot-etc:/etc/letsencrypt
+      - ./.docker/certbot-var:/var/lib/letsencrypt
       - /server/node_modules
     env_file:
       - .env
   app001-provider:
-    container_name:   app001-provider
+    container_name: app001-provider
     build:
       context: ./provider/.
       args:
@@ -61,8 +59,6 @@ services:
         PORT: 5555
     env_file:
       - .env
-    ports:
-      - 5555:5555
     networks:
       - service-web
     restart: always
@@ -76,8 +72,6 @@ services:
       - POSTGRES_PASSWORD=services
       - POSTGRES_DB=services
       - PGDATA=/var/lib/postgresql/data/pgdata
-    ports:
-      - "5432:5432"
     healthcheck:
       test: [ "CMD", "pg_isready" , "-U", "trade" ]
       interval: 30s
@@ -86,8 +80,8 @@ services:
     networks:
       - service-web
     volumes:
-      - ./docker/postgresql/db:/var/lib/postgresql/data/pgdata
-      - ./docker/postgresql:/etc/postgresql
+      - ./.docker/postgresql/db:/var/lib/postgresql/data/pgdata
+      - ./.docker/postgresql:/etc/postgresql
   app001-migrator:
     links:
       - app001-postgres

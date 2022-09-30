@@ -3,6 +3,7 @@ import {TASK_REPOSITORY, SCHEDULER_CLIENT} from "../app.constants";
 import {ITaskClient} from "./interfaces/task.client.interface";
 import {ITaskServiceRepository} from "../../infrastructure/database/postgres/interface/task.repository.interface";
 import {TaskEntity} from "../../tasks/task.entity";
+import {AnyDayVariable} from "app";
 
 export class TaskService {
     private readonly client: ITaskClient;
@@ -17,7 +18,7 @@ export class TaskService {
         return this.client.getTasks();
     }
 
-    getMetrics(url: string) {
+    getMetrics(url: string): Promise<AnyDayVariable> {
         return Service.fetchJSON(url);
     }
 }

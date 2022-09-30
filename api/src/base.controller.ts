@@ -11,6 +11,7 @@ import {PublicUser, UserEntity} from "./users/user.entity";
 import {EventEmitter} from "events";
 import {AccountEntity} from "./accounts/account.entity";
 import {HttpException} from "./infrastructure/exception/http.exception";
+import {AnyDayVariable} from "app";
 
 export abstract class BaseController {
   config:     Config
@@ -23,7 +24,7 @@ export abstract class BaseController {
     this.logger = Service.getService<Logger>(LOGGER_SERVICE);
   }
 
-  public static updateEntity<T> (entity: T, body: any): T {
+  public static updateEntity<T> (entity: T, body: AnyDayVariable): T {
     for (const field in body) {
       if (body.hasOwnProperty(field)) {
         const value = body[field];

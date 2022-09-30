@@ -8,3 +8,5 @@ export type Connections = {
     redisSub?:   RedisClientType<RedisModules, RedisScripts>,
 };
 declare module "passport-2fa-totp";
+
+export type AnyDayVariable = any;

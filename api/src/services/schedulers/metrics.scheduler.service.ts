@@ -2,30 +2,31 @@ import { BaseScheduler } from "./base.scheduler.service";
 import {Service} from "../app.service";
 
 import {
-  SCHEDULER_SERVICE, TIMESERIES_REPOSITORY
+  TASK_SERVICE, TIMESERIES_REPOSITORY
 } from "../app.constants";
 import {TaskService} from "../task/task.service";
 import {TaskEntity} from "../../tasks/task.entity";
 import {ITimeSeriesServiceRepository} from "../../infrastructure/database/postgres/interface/timeseries.repository.interface";
 import {TimeSeriesEntity} from "../../timeseries/timeseries.entity";
+import {AnyDayVariable} from "app";
 
 export class MetricsSchedulerService extends BaseScheduler {
   private readonly taskEntity: TaskEntity;
-  private readonly httpService: TaskService;
+  private readonly taskService: TaskService;
   private readonly repository: ITimeSeriesServiceRepository;
 
   constructor(entity: TaskEntity) {
     super(entity.config.scheduler);
 
     this.taskEntity = entity;
-    this.httpService = Service.getService<TaskService>(SCHEDULER_SERVICE);
+    this.taskService = Service.getService<TaskService>(TASK_SERVICE);
     this.repository = Service.getRepository(TIMESERIES_REPOSITORY);
   }
 
-  private extract(metric: string, metrics: any) {
+  private extract(metric: string, metrics: AnyDayVariable) {
     return getValue(metrics);
 
-    function getValue(obj: any): any {
+    function getValue(obj: AnyDayVariable): AnyDayVariable {
       for (const prop in obj) {
         if (typeof obj[prop] === "object") {
           return getValue(obj[prop]);
@@ -39,7 +40,7 @@ export class MetricsSchedulerService extends BaseScheduler {
   }
   
   public work(): void {
-    this.httpService
+    this.taskService
       .getMetrics(this.taskEntity.config.query)
       .then(async (response) => {
         const value = this.extract(this.taskEntity.config.metrics, response);

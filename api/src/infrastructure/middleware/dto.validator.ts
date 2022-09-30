@@ -4,8 +4,9 @@ import { validate, ValidationError } from "class-validator";
 import { sanitize } from "class-sanitizer";
 import { HttpException } from "../exception/http.exception";
 import {HttpStatus} from "../exception/auth.exception.messages";
+import {AnyDayVariable} from "app";
 
-function dtoValidatorMiddleware(type: any, skipMissingProperties = false): RequestHandler {
+function dtoValidatorMiddleware(type: AnyDayVariable, skipMissingProperties = false): RequestHandler {
 
   return (request: express.Request, response: express.Response, next: express.NextFunction) => {
     const dtoObj = plainToClass(type, request.body);

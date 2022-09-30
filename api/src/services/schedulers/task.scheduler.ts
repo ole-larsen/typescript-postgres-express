@@ -3,23 +3,23 @@ import {Service} from "../app.service";
 import {Config} from "../../infrastructure/util/secrets";
 import {
     CONFIG_SERVICE,
-    SCHEDULER_SERVICE
+    TASK_SERVICE
 } from "../app.constants";
 import {TaskService} from "../task/task.service";
 import {TaskEntity} from "../../tasks/task.entity";
 import {MetricsSchedulerService} from "./metrics.scheduler.service";
 
 export class TaskScheduler extends BaseScheduler {
-    private readonly httpService: TaskService;
+    private readonly taskService: TaskService;
 
     constructor(cronExpression: string = Service.getService<Config>(CONFIG_SERVICE).schedulers.httpScheduler || "*/1 * * * *") {
         super(cronExpression);
-        this.httpService = Service.getService<TaskService>(SCHEDULER_SERVICE);
+        this.taskService = Service.getService<TaskService>(TASK_SERVICE);
     }
 
     public work(): void {
         this.logger.info("start every minute main scheduler", { service: "main-scheduler" });
-        this.httpService
+        this.taskService
           .getTasks()
           .then((tasks: TaskEntity[]) => {
               tasks.forEach((task: TaskEntity) => {

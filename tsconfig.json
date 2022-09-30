@@ -29,7 +29,7 @@
         "node_modules",
         "application/**/*",
         "provider",
-        "docker/**/*",
+      ".docker/**/*",
         "migrations"
     ]
 }

@@ -20,6 +20,7 @@ import {HttpExceptionMessages, HttpStatus} from "../infrastructure/exception/aut
 import {GetUserResponse} from "../users/response/get.user.response";
 import {PostForgotResponse} from "../users/response/post.forgot.response";
 import {HttpException} from "../infrastructure/exception/http.exception";
+import {AnyDayVariable} from "app";
 
 const GoogleAuthenticator = Passport2faTotp.GoogeAuthenticator;
 
@@ -95,7 +96,7 @@ export class AuthController extends BaseController implements IAuthController {
     passport.use(new LocalStrategy(
       {
         usernameField: "email"
-      }, async (email: string, password: string, done: any) => {
+      }, async (email: string, password: string, done: AnyDayVariable) => {
         const repository = Service.getRepository<IUserServiceRepository>(USER_REPOSITORY);
         try {
           const user = await repository.getByEmail(email);
