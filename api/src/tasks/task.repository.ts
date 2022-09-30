@@ -189,12 +189,20 @@ export class TaskRepository extends BaseRepository implements ITaskServiceReposi
       .client
       .query(
         `UPDATE ${this.taskTable}
-            SET  enabled = $2,
-                 removed = $3,
-                 updated = $4
+            SET  name = $2,
+                 identity = $3,
+                 config = $4,
+                 status = $5,
+                 enabled = $6,
+                 removed = $7,
+                 updated = $8
             WHERE id = $1 RETURNING *;`,
         [
           entity.id,
+          entity.name,
+          entity.identity,
+          entity.config,
+          entity.status,
           entity.enabled,
           entity.removed,
           new Date()
