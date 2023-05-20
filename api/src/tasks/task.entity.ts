@@ -2,7 +2,6 @@ import {Service} from "../services/app.service";
 import {TASK_REPOSITORY, POSTGRES_SERVICE} from "../services/app.constants";
 import {ITaskServiceRepository} from "../infrastructure/database/postgres/interface/task.repository.interface";
 import {IPostgresFactory} from "../infrastructure/database/postgres/factory/postgres.factory.interface";
-import {QueryResult} from "pg";
 
 export class TaskEntity {
   public save: () => Promise<TaskEntity>;

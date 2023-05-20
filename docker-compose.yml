@@ -3,7 +3,7 @@ services:
   app001-frontend:
     container_name: app001-frontend
     build:
-      context: application
+      context: ./application
       args:
         NODE_ENV: 'production'
     ports:
@@ -51,19 +51,13 @@ services:
     env_file:
       - .env
   app001-provider:
+    image: olelarsen/provider
     container_name: app001-provider
-    build:
-      context: ./provider/.
-      args:
-        NODE_ENV: "production"
-        PORT: 5555
-    env_file:
-      - .env
+    environment:
+      PORT: 5555
     networks:
       - service-web
     restart: always
-    volumes:
-      - .env:/go/src/provider/.env:ro
   app001-postgres:
     image: timescale/timescaledb:2.5.1-pg14
     container_name: app001-postgres

@@ -20,3 +20,4 @@ Postgres DATABASE_URL=postgresql://services:services@postgres:5432/services
 * `npm run migration:run` - Start database migrations. Need `DATABASE_URL` [environment variable](#environment-variables).
 * `npm run migration:down` - Revert last database migration. Need `DATABASE_URL` [environment variable](#environment-variables).
 
+DOCKER_BUILDKIT=0 docker-compose up -d

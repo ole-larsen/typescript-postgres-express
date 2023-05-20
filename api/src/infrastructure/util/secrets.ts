@@ -28,6 +28,7 @@ export class Config {
         port:   string;
         secret: string;
         domain: string;
+        state:  string;
     }
     defaultUser: {
         username: string;
@@ -77,7 +78,8 @@ export class Config {
         this.app = {
             port:   process.env["SERVER_PORT"] || "3000",
             secret: process.env["SESSION_SECRET"],
-            domain: process.env["SERVER_DOMAIN"] || "localhost"
+            domain: process.env["SERVER_DOMAIN"] || "localhost",
+            state:  process.env["OAUTH_STATE"] || "xyz"
         };
 
         this.defaultUser = {
@@ -98,6 +100,7 @@ export class Config {
             scheduler: process.env["SCHEDULER_SERVICE"],
             provider: process.env["PROVIDER"]
         };
+
         this.schedulers = {};
     }
 }

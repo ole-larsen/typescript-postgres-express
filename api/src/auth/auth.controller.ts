@@ -235,7 +235,7 @@ export class AuthController extends BaseController implements IAuthController {
                         authorizationUri: `${this.config.services.provider}/api/v1/authorize`,
                         redirectUri: `//${this.config.app.domain}:${this.config.app.port}/api/v1/auth/callback`,
                         scopes: ["all"],
-                        state: "xyz"
+                        state: this.config.app.state
                       });
                       return Service.fetchJSON(auth.code.getUri(), {method: "GET"})
                         .then(callback => {
